@@ -175,7 +175,8 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .detadd{font-size:13.5px;font-weight:600;color:var(--brand);display:inline-flex;align-items:center;gap:6px;padding:8px 4px}
 
 /* ---------- COMPACT KEYPAD ---------- */
-.keypad{border-top:1px solid var(--border);background:var(--surface);padding:6px 10px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,1fr) 64px;gap:6px}
+.keypad{border-top:1px solid var(--border);background:var(--surface);padding:6px 10px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.key.kzero{grid-column:span 4}
 .key{min-height:44px;border-radius:var(--r-sm);background:var(--surface-2);font-family:'Nunito';font-weight:700;font-size:19px;color:var(--text);display:grid;place-items:center;transition:transform .1s,background .12s}
 .key:active{transform:scale(.95);background:var(--border)}
 .key.meta{font-size:12px;font-weight:600;color:var(--text-2);border:1px solid var(--border);gap:1px}
@@ -262,9 +263,6 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .tx-items .ti{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-3)}
 .tx-items .ti span:last-child{font-family:'Nunito';font-weight:700}
 .acc-chip.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand-strong)}
-.datebar{margin:0 10px 6px;min-height:44px;width:calc(100% - 20px);border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600;font-size:14px;color:var(--text-2)}
-.datebar:active{background:var(--border)}
-.datebar span{text-transform:capitalize}
 .dd-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px}
 .dd-row + .dd-row{border-top:1px solid var(--border)}
 .dd-k{font-size:13.5px;color:var(--text-3);font-weight:500;flex:none}
@@ -590,23 +588,26 @@ function renderFeed(){
 }
 function bindDensity(){$('#homebody').querySelectorAll('[data-dens]').forEach(b=>b.onclick=()=>{if(DENSITY===b.dataset.dens)return;DENSITY=b.dataset.dens;renderFeed()})}
 
-/* ---------- LIMITS ---------- */
-function weekRangeNow(){const mon=mondayOf(todayISO());const m=new Date(mon+'T00:00:00');const e=new Date(m);e.setDate(m.getDate()+6);const end=new Date(e.getTime()-e.getTimezoneOffset()*60000).toISOString().slice(0,10);return{start:mon,end}}
+/* ---------- LIMITS (месячные) ---------- */
+function monthRangeNow(){const now=new Date();const y=now.getFullYear(),m=now.getMonth();
+  const s=new Date(Date.UTC(y,m,1)).toISOString().slice(0,10);
+  const e=new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10);
+  return{start:s,end:e};}
 function limitOf(catId){return (STATE.limits||[]).find(l=>l.category_id===catId)}
-function spentThisWeek(catId){const {start,end}=weekRangeNow();return STATE.transactions.filter(t=>t.type==='expense'&&t.category_id===catId&&t.occurred_on>=start&&t.occurred_on<=end).reduce((s,t)=>s+t.amount,0)}
+function spentThisMonth(catId){const {start,end}=monthRangeNow();return STATE.transactions.filter(t=>t.type==='expense'&&t.category_id===catId&&t.occurred_on>=start&&t.occurred_on<=end).reduce((s,t)=>s+t.amount,0)}
 function renderLimits(){
   const body=$('#homebody');
   const cats=STATE.categories.filter(c=>c.type==='expense');
   const withL=cats.filter(c=>limitOf(c.id));
   const without=cats.filter(c=>!limitOf(c.id));
-  let html=`<div class="pad fade"><div class="period-lbl" style="text-align:left;margin:10px 4px 2px">Лимиты на неделю · ${esc(weekLabel(weekRangeNow().start))}</div>`;
+  const monthName=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'}).format(new Date());
+  let html=`<div class="pad fade"><div class="period-lbl" style="text-align:left;margin:10px 4px 2px">Лимиты на месяц · ${esc(monthName)}</div>`;
   if(withL.length){
     html+=`<div class="limits">`;
     withL.forEach(c=>{
-      const lim=limitOf(c.id).amount, sp=spentThisWeek(c.id);
+      const lim=limitOf(c.id).amount, sp=spentThisMonth(c.id);
       const pct=lim>0?Math.min(100,Math.round(sp/lim*100)):0;
       const over=sp>lim;
-      const col=over?'var(--danger)':(pct>=80?'var(--warning)':cHex(c.color||'brand')||cHex('brand'));
       const barCol=over?'var(--danger)':(pct>=80?'var(--warning)':(c.color||'var(--brand)'));
       html+=`<button class="limitcard" data-lim="${c.id}">
         <div class="lc-top"><span class="lc-name">${esc(c.name)}</span><span class="lc-val" style="color:${over?'var(--danger)':'var(--text)'}">${fmt0(sp)} / ${fmt0(lim)} ₽</span></div>
@@ -629,7 +630,7 @@ function openLimitEdit(catId){
   const c=catById(catId);if(!c)return;
   const cur=limitOf(catId);
   openSheet(`<div class="s-title">Лимит · ${esc(c.name)}</div>
-    <div class="s-input-row"><input class="input" id="limAmt" inputmode="decimal" placeholder="Сумма в неделю, ₽" value="${cur?cur.amount:''}"></div>
+    <div class="s-input-row"><input class="input" id="limAmt" inputmode="decimal" placeholder="Сумма в месяц, ₽" value="${cur?cur.amount:''}"></div>
     <div style="padding:6px 16px 4px"><button class="btn btn-primary btn-block" id="limSave">Сохранить</button></div>
     ${cur?`<div style="padding:4px 16px 4px"><button class="btn btn-block" id="limDel" style="background:var(--danger-soft);color:var(--danger)">Убрать лимит</button></div>`:''}`);
   setTimeout(()=>$('#limAmt')?.focus(),50);
@@ -957,12 +958,14 @@ function renderEntry(){
       <textarea class="input" id="comment" placeholder="">${esc(d.comment||'')}</textarea>
       <div style="height:16px"></div>
     </div>
-    <button class="datebar" id="kDate">${IC.cal}<span id="dateLbl">${fmtDate(d.occurred_on)}</span></button>
     <div class="keypad">
       <button class="key" data-k="1">1</button><button class="key" data-k="2">2</button><button class="key" data-k="3">3</button>
+      <button class="key meta" id="kDate">${IC.cal}<small id="dateLbl">${fmtDateShort(d.occurred_on)}</small></button>
       <button class="key" data-k="4">4</button><button class="key" data-k="5">5</button><button class="key" data-k="6">6</button>
+      <button class="key" id="kBack">⌫</button>
       <button class="key" data-k="7">7</button><button class="key" data-k="8">8</button><button class="key" data-k="9">9</button>
-      <button class="key" data-k=",">,</button><button class="key" data-k="0">0</button><button class="key" id="kBack">⌫</button>
+      <button class="key" data-k=",">,</button>
+      <button class="key kzero" data-k="0">0</button>
     </div>
     <div style="padding:8px 12px calc(10px + env(safe-area-inset-bottom))"><button class="btn btn-primary btn-block" id="kOk" style="min-height:50px">Готово</button></div>
   </div>`;
@@ -1068,7 +1071,7 @@ function renderDatePicker(){
   $('#sheet').querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>selectDate(b.dataset.day));
   $('#dpToday').onclick=()=>selectDate(today);
   $('#dpYest').onclick=()=>{const d=new Date();d.setDate(d.getDate()-1);selectDate(new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))};
-  $('#dpDone').onclick=()=>{closeSheet();const l=$('#dateLbl');if(l)l.textContent=fmtDate(DRAFT.occurred_on)};
+  $('#dpDone').onclick=()=>{closeSheet();const l=$('#dateLbl');if(l)l.textContent=fmtDateShort(DRAFT.occurred_on)};
 }
 /* выбор даты: подсвечивает и запоминает, но не закрывает плашку */
 function selectDate(iso){
