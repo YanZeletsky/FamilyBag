@@ -37,7 +37,10 @@
   --danger:#F0656A; --danger-soft:#F0656A24;
   --sh-1:0 1px 2px rgba(0,0,0,.3); --sh-2:0 4px 12px rgba(0,0,0,.35); --sh-3:0 12px 28px rgba(0,0,0,.45);
 }
-*{box-sizing:border-box;margin:0;padding:0}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:focus{outline:none}
+:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+::selection{background:var(--brand-soft);color:var(--text)}
 html,body{height:100%}
 body{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;line-height:1.5;overscroll-behavior:none}
 h1,h2,h3,.nun{font-family:'Nunito','Inter',sans-serif}
@@ -347,6 +350,8 @@ const IC={
   back:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
   fwd:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
   receipt:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
+  eye:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+  eyeOff:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.2 2.9M6.7 6.7A13.3 13.3 0 0 0 2 11s3.5 7 10 7a9 9 0 0 0 3.3-.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
 };
 
 /* ============================================================ РЕНДЕР */
@@ -363,13 +368,17 @@ function renderLogin(){
     <h1 style="font-size:26px;font-weight:800;margin-bottom:22px">Вход</h1>
     <form id="loginForm" novalidate>
       <div class="field"><label>Email</label><input class="input" name="email" type="email" autocomplete="username" autocapitalize="off"></div>
-      <div class="field"><label>Пароль</label><input class="input" name="pass" type="password" autocomplete="current-password"></div>
+      <div class="field"><label>Пароль</label>
+        <div style="position:relative">
+          <input class="input" name="pass" type="password" autocomplete="current-password" style="padding-right:48px">
+          <button type="button" id="pwToggle" aria-label="Показать пароль" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);width:40px;height:40px;display:grid;place-items:center;color:var(--text-3)">${IC.eye}</button>
+        </div>
+      </div>
       <div id="loginErr"></div>
       <button class="btn btn-primary btn-block" id="loginBtn" type="submit" style="margin-top:8px">Войти</button>
     </form>
   </div>`;
-  $('#loginForm').onsubmit=async e=>{
-    e.preventDefault();const f=e.target,err=$('#loginErr'),btn=$('#loginBtn');err.innerHTML='';
+  $('#loginForm').onsubmit=async e=>{    e.preventDefault();const f=e.target,err=$('#loginErr'),btn=$('#loginBtn');err.innerHTML='';
     f.querySelectorAll('.input').forEach(i=>i.classList.remove('err'));
     const email=f.email.value.trim(),pass=f.pass.value;
     if(!email){f.email.classList.add('err');return err.innerHTML='<p class="hint-err">Введите email.</p>'}
@@ -384,10 +393,15 @@ function renderLogin(){
       ROUTE='home';toast('Вы вошли');render();
     }catch(ex){err.innerHTML='<p class="hint-err">Не удалось загрузить данные. Обновите страницу.</p>';ROUTE='login';render()}
   };
+  $('#pwToggle').onclick=()=>{const inp=$('#loginForm').pass,btn=$('#pwToggle');
+    const show=inp.type==='password';inp.type=show?'text':'password';
+    btn.innerHTML=show?IC.eyeOff:IC.eye;btn.setAttribute('aria-label',show?'Скрыть пароль':'Показать пароль')};
 }
 
 
 /* ---------- HOME ---------- */
+function visibleAccounts(){return STATE.accounts.filter(a=>!a.owner||a.owner===STATE.session)}
+
 function renderHome(){
   app.innerHTML=`
   <div class="topbar">
@@ -397,14 +411,14 @@ function renderHome(){
   </div>
   <div class="scroll">
     <div class="carou" id="carou">
-      ${STATE.accounts.map(a=>{const h=cHex(a.color);const owner=a.owner?memberById(a.owner):null;
+      ${visibleAccounts().map(a=>{const h=cHex(a.color);const owner=a.owner?memberById(a.owner):null;
         return `<div class="acard" style="background:linear-gradient(135deg,${h},${shade(h)})">
           <div class="top"><span class="ava">${owner?esc(owner.initial):'∞'}</span>Счёт · ${esc(a.name)}</div>
           <div><div class="lbl">Баланс</div><div class="bal">${fmt0(accBalance(a.id))} ₽</div>
           <div class="cap">${owner?'личный · '+esc(owner.firstName):'общий счёт семьи'}</div></div>
         </div>`}).join('')}
     </div>
-    <div class="dots" id="dots">${STATE.accounts.map((a,i)=>`<i class="${i===CAROU_IDX?'on':''}"></i>`).join('')}</div>
+    <div class="dots" id="dots">${visibleAccounts().map((a,i)=>`<i class="${i===CAROU_IDX?'on':''}"></i>`).join('')}</div>
     <div class="htabs">
       <button data-hv="ops" class="${HOME_VIEW==='ops'?'on':''}">Операции</button>
       <button data-hv="stats" class="${HOME_VIEW==='stats'?'on':''}">Аналитика</button>
@@ -416,7 +430,7 @@ function renderHome(){
   $('#btnOut').onclick=async()=>{await db.logout();STATE=null;ROUTE='login';toast('Вы вышли');render()};
   $('#fab').onclick=()=>openEntry();
   const carou=$('#carou');
-  carou.addEventListener('scroll',()=>{const i=Math.round(carou.scrollLeft/(carou.scrollWidth/STATE.accounts.length));
+  carou.addEventListener('scroll',()=>{const n=visibleAccounts().length;const i=Math.round(carou.scrollLeft/(carou.scrollWidth/n));
     if(i!==CAROU_IDX){CAROU_IDX=i;$('#dots').querySelectorAll('i').forEach((d,j)=>d.classList.toggle('on',j===i))}},{passive:true});
   app.querySelectorAll('[data-hv]').forEach(b=>b.onclick=()=>{
     if(HOME_VIEW===b.dataset.hv)return;
@@ -558,6 +572,7 @@ function openTxActions(id){
 
 /* ============================================================ ENTRY */
 function openEntry(existing){
+  const fab=$('#fab'); if(fab) fab.style.display='none';
   const u=me();
   if(existing){DRAFT={...existing,amountStr:String(existing.amount),items:existing.items?existing.items.map(i=>({...i,amountStr:String(i.amount)})):null,showDet:!!(existing.items&&existing.items.length)}}
   else{
@@ -569,7 +584,7 @@ function openEntry(existing){
   }
   renderEntry();
 }
-function closeEntry(){DRAFT=null;$('#entry-root').innerHTML='';render()}
+function closeEntry(){DRAFT=null;$('#entry-root').innerHTML='';const fab=$('#fab');if(fab)fab.style.display='';render()}
 
 function detTotal(){if(!DRAFT.items)return 0;return DRAFT.items.reduce((s,i)=>s+(parseFloat(i.amountStr)||0),0)}
 function currentAmount(){ // если есть детализация с позициями — сумма позиций; иначе поле
@@ -709,7 +724,7 @@ function refreshAmt(){
 /* ---------- ACCOUNT CHOOSER ---------- */
 function openAccChooser(title){const d=DRAFT;
   openSheet(`<div class="s-title">${esc(title)}</div><div class="s-choose">
-    ${STATE.accounts.map(a=>{const owner=a.owner?memberById(a.owner):null;const h=cHex(a.color);
+    ${visibleAccounts().map(a=>{const owner=a.owner?memberById(a.owner):null;const h=cHex(a.color);
       return `<button class="s-opt ${a.id===d.account_id?'on':''}" data-acc="${a.id}"><span style="width:10px;height:10px;border-radius:50%;background:${h};display:inline-block"></span>${esc(a.name)} <span style="color:var(--text-3);font-weight:500;font-size:13px">${owner?esc(owner.firstName):'общий'}</span> ${a.id===d.account_id?`<span class="chk">${IC.check}</span>`:''}</button>`}).join('')}
   </div>`);
   $('#sheet').querySelectorAll('[data-acc]').forEach(b=>b.onclick=()=>{d.account_id=b.dataset.acc;closeSheet();const l=$('#accLbl');if(l)l.textContent=accById(d.account_id).name});
@@ -744,14 +759,22 @@ function renderDatePicker(){
       </div>
       <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div>
       <div class="dp-quick"><button id="dpToday">Сегодня</button><button id="dpYest">Вчера</button></div>
+      <div style="padding:12px 4px 2px"><button class="btn btn-primary btn-block" id="dpDone">Готово</button></div>
     </div>`);
   $('#dpPrev').onclick=()=>{DP_VIEW.m--;if(DP_VIEW.m<0){DP_VIEW.m=11;DP_VIEW.y--}renderDatePicker()};
   $('#dpNext').onclick=()=>{DP_VIEW.m++;if(DP_VIEW.m>11){DP_VIEW.m=0;DP_VIEW.y++}renderDatePicker()};
-  $('#sheet').querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>pickDate(b.dataset.day));
-  $('#dpToday').onclick=()=>pickDate(today);
-  $('#dpYest').onclick=()=>{const d=new Date();d.setDate(d.getDate()-1);pickDate(new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))};
+  $('#sheet').querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>selectDate(b.dataset.day));
+  $('#dpToday').onclick=()=>selectDate(today);
+  $('#dpYest').onclick=()=>{const d=new Date();d.setDate(d.getDate()-1);selectDate(new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10))};
+  $('#dpDone').onclick=()=>{closeSheet();const l=$('#dateLbl');if(l)l.textContent=fmtDateShort(DRAFT.occurred_on)};
 }
-function pickDate(iso){DRAFT.occurred_on=iso;closeSheet();const l=$('#dateLbl');if(l)l.textContent=fmtDateShort(iso)}
+/* выбор даты: подсвечивает и запоминает, но не закрывает плашку */
+function selectDate(iso){
+  DRAFT.occurred_on=iso;
+  const d=new Date(iso+'T00:00:00');
+  if(d.getFullYear()!==DP_VIEW.y||d.getMonth()!==DP_VIEW.m){DP_VIEW={y:d.getFullYear(),m:d.getMonth()};renderDatePicker();return}
+  $('#sheet').querySelectorAll('[data-day]').forEach(b=>b.classList.toggle('sel',b.dataset.day===iso));
+}
 
 /* ---------- SAVE ---------- */
 async function confirmEntry(){
