@@ -152,6 +152,17 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .resp-chip.on[data-r="him"]{background:var(--him-soft);border-color:var(--him);color:var(--him)}
 .resp-chip.on[data-r="her"]{background:var(--her-soft);border-color:var(--her);color:var(--her)}
 .resp-chip.on[data-r="shared"]{background:var(--shared-soft);border-color:var(--shared);color:var(--shared)}
+.chip.chip-add{border-style:dashed;color:var(--brand-strong);border-color:var(--brand)}
+.chip .chip-edit{display:inline-flex;align-items:center;justify-content:center;margin-left:2px;margin-right:-4px;width:20px;height:20px;border-radius:50%;color:currentColor;opacity:.7}
+.chip .chip-edit:active{background:rgba(0,0,0,.08)}
+.sheet .s-input-row{display:flex;gap:8px;padding:6px 16px 10px}
+.sheet .s-input-row .input{flex:1}
+.sheet .s-sub{display:flex;align-items:center;gap:10px;padding:10px 16px}
+.sheet .s-sub .nm{flex:1;font-weight:600;font-size:14.5px}
+.sheet .s-sub .del{width:34px;height:34px;border-radius:var(--r-sm);background:var(--surface-2);display:grid;place-items:center;color:var(--danger);flex:none}
+.sheet .sw-row{display:flex;gap:10px;padding:4px 16px 10px;flex-wrap:wrap}
+.sheet .sw-row .sw{width:38px;height:38px;border-radius:50%;border:3px solid transparent}
+.sheet .sw-row .sw[aria-pressed="true"]{border-color:var(--text)}
 
 /* toggle detalization */
 .dettoggle{font-size:12px;font-weight:700;color:var(--brand);text-transform:none;letter-spacing:0;display:inline-flex;align-items:center;gap:5px}
@@ -241,6 +252,15 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .whorow .bar{height:8px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
 .whorow .bar i{display:block;height:100%;border-radius:var(--r-pill)}
 .sec-lbl{font-size:12px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:.04em;margin:18px 20px 4px}
+.densbar{display:flex;justify-content:flex-end;padding:12px 2px 2px}
+.densbar .seg.dens{width:auto;flex:none}
+.densbar .seg.dens button{min-width:82px;min-height:34px;padding:0 14px}
+.txrow{align-items:flex-start}
+.tx-extra{margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)}
+.tx-cmt{font-size:13px;color:var(--text-2);margin-bottom:6px;white-space:normal}
+.tx-items{display:flex;flex-direction:column;gap:3px}
+.tx-items .ti{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text-3)}
+.tx-items .ti span:last-child{font-family:'Nunito';font-weight:700}
 </style>
 </head>
 <body>
@@ -261,7 +281,8 @@ function cHex(c){return getCss('--'+c)||'#888'}
 
 /* палитра категорий (для кольца аналитики) */
 const CAT_PALETTE=['#4C9F70','#4C7DF0','#E0A33D','#EC5F86','#57B4E8','#E5484D','#8B6DF0','#2AA6A0','#E5844D'];
-function catColor(catId){const c=catById(catId);if(!c)return '#999';const list=STATE.categories.filter(x=>x.type===c.type);const idx=list.findIndex(x=>x.id===catId);return CAT_PALETTE[idx%CAT_PALETTE.length]}
+function catColor(catId){const c=catById(catId);if(!c)return '#999';if(c.color)return c.color;const list=STATE.categories.filter(x=>x.type===c.type);const idx=list.findIndex(x=>x.id===catId);return CAT_PALETTE[idx%CAT_PALETTE.length]}
+function subsOf(catId){return (STATE.subcategories||[]).filter(s=>s.category_id===catId)}
 
 /* нормализация строк из БД (numeric приходит строкой) */
 function normAcc(a){return {...a, owner:a.owner_id, start:Number(a.start)||0}}
@@ -279,15 +300,16 @@ const db={
   /* грузим всё пространство семьи в память (RLS отдаёт только свою семью) */
   async loadAll(){
     const user=await this.currentUser(); if(!user) return null;
-    const [mem,acc,cat,tx]=await Promise.all([
+    const [mem,acc,cat,sub,tx]=await Promise.all([
       sb.from('members').select('*'),
       sb.from('accounts').select('*').order('sort'),
       sb.from('categories').select('*').order('sort'),
+      sb.from('subcategories').select('*').order('sort'),
       sb.from('transactions').select('*'),
     ]);
-    if(mem.error||acc.error||cat.error||tx.error){
-      console.error(mem.error||acc.error||cat.error||tx.error);
-      throw (mem.error||acc.error||cat.error||tx.error);
+    if(mem.error||acc.error||cat.error||sub.error||tx.error){
+      console.error(mem.error||acc.error||cat.error||sub.error||tx.error);
+      throw (mem.error||acc.error||cat.error||sub.error||tx.error);
     }
     const members=(mem.data||[]).map(normMember);
     const meMember=members.find(m=>m.id===user.id);
@@ -296,6 +318,7 @@ const db={
       family, members,
       accounts:(acc.data||[]).map(normAcc),
       categories:cat.data||[],
+      subcategories:sub.data||[],
       transactions:(tx.data||[]).map(normTx),
       session:user.id,
     };
@@ -309,12 +332,53 @@ const db={
     if(error) throw error; return normTx(data);
   },
   async deleteTx(id){const {error}=await sb.from('transactions').delete().eq('id',id);if(error) throw error;},
+  async insertCategory(payload){
+    const {data,error}=await sb.from('categories').insert(payload).select().single();
+    if(error) throw error; return data;
+  },
+  async deleteCategory(id){const {error}=await sb.from('categories').delete().eq('id',id);if(error) throw error;},
+  async insertSub(payload){
+    const {data,error}=await sb.from('subcategories').insert(payload).select().single();
+    if(error) throw error; return data;
+  },
+  async deleteSub(id){const {error}=await sb.from('subcategories').delete().eq('id',id);if(error) throw error;},
 };
 
 /* ============================================================ HELPERS */
 const $=(s,r=document)=>r.querySelector(s);
 const app=$('#app');
-let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month';
+let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, STAT_ACC='all', DENSITY='short';
+
+/* точечное обновление данных операций + мягкая перерисовка */
+function upsertTx(row){const i=STATE.transactions.findIndex(t=>t.id===row.id);if(i>=0)STATE.transactions[i]=row;else STATE.transactions.push(row)}
+function removeTxLocal(id){STATE.transactions=STATE.transactions.filter(t=>t.id!==id)}
+function updateBalances(){visibleAccounts().forEach(a=>{const el=document.querySelector(`[data-bal="${a.id}"]`);if(el)el.textContent=`${fmt0(accBalance(a.id))} ₽`})}
+function softRefresh(){if(ROUTE!=='home'||!STATE)return;updateBalances();renderHomeBody()}
+
+/* realtime: изменения прилетают сами (RLS отдаёт только свою семью) */
+function upsertCat(row){const i=STATE.categories.findIndex(c=>c.id===row.id);if(i>=0)STATE.categories[i]=row;else STATE.categories.push(row)}
+function removeCatLocal(id){STATE.categories=STATE.categories.filter(c=>c.id!==id)}
+function upsertSub(row){STATE.subcategories=STATE.subcategories||[];const i=STATE.subcategories.findIndex(s=>s.id===row.id);if(i>=0)STATE.subcategories[i]=row;else STATE.subcategories.push(row)}
+function removeSubLocal(id){STATE.subcategories=(STATE.subcategories||[]).filter(s=>s.id!==id)}
+function subscribeRealtime(){
+  if(RT)return;
+  RT=sb.channel('fb-changes')
+    .on('postgres_changes',{event:'*',schema:'public',table:'transactions'},payload=>{
+      if(payload.eventType==='DELETE'){removeTxLocal(payload.old.id)}else{upsertTx(normTx(payload.new))}
+      softRefresh();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'categories'},payload=>{
+      if(payload.eventType==='DELETE'){removeCatLocal(payload.old.id)}else{upsertCat(payload.new)}
+      if(DRAFT)refreshEntryCats(); softRefresh();
+    })
+    .on('postgres_changes',{event:'*',schema:'public',table:'subcategories'},payload=>{
+      if(payload.eventType==='DELETE'){removeSubLocal(payload.old.id)}else{upsertSub(payload.new)}
+      if(DRAFT)refreshEntryCats();
+    })
+    .subscribe();
+}
+function unsubscribeRealtime(){if(RT){sb.removeChannel(RT);RT=null}}
+
 
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2000)}
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
@@ -352,6 +416,8 @@ const IC={
   receipt:'<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 7h8M8 11h8M8 15h5"/></svg>',
   eye:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
   eyeOff:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.2 2.9M6.7 6.7A13.3 13.3 0 0 0 2 11s3.5 7 10 7a9 9 0 0 0 3.3-.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
+  pencilS:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  xS:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
 
 /* ============================================================ РЕНДЕР */
@@ -390,7 +456,7 @@ function renderLogin(){
     try{
       ROUTE='boot';render();
       STATE=await db.loadAll();
-      ROUTE='home';toast('Вы вошли');render();
+      ROUTE='home';toast('Вы вошли');render();subscribeRealtime();
     }catch(ex){err.innerHTML='<p class="hint-err">Не удалось загрузить данные. Обновите страницу.</p>';ROUTE='login';render()}
   };
   $('#pwToggle').onclick=()=>{const inp=$('#loginForm').pass,btn=$('#pwToggle');
@@ -414,7 +480,7 @@ function renderHome(){
       ${visibleAccounts().map(a=>{const h=cHex(a.color);const owner=a.owner?memberById(a.owner):null;
         return `<div class="acard" style="background:linear-gradient(135deg,${h},${shade(h)})">
           <div class="top"><span class="ava">${owner?esc(owner.initial):'∞'}</span>Счёт · ${esc(a.name)}</div>
-          <div><div class="lbl">Баланс</div><div class="bal">${fmt0(accBalance(a.id))} ₽</div>
+          <div><div class="lbl">Баланс</div><div class="bal" data-bal="${a.id}">${fmt0(accBalance(a.id))} ₽</div>
           <div class="cap">${owner?'личный · '+esc(owner.firstName):'общий счёт семьи'}</div></div>
         </div>`}).join('')}
     </div>
@@ -427,7 +493,7 @@ function renderHome(){
   </div>
   <button class="fab" id="fab">${IC.plus}</button>`;
   $('#btnTheme').onclick=toggleTheme;
-  $('#btnOut').onclick=async()=>{await db.logout();STATE=null;ROUTE='login';toast('Вы вышли');render()};
+  $('#btnOut').onclick=async()=>{unsubscribeRealtime();await db.logout();STATE=null;ROUTE='login';toast('Вы вышли');render()};
   $('#fab').onclick=()=>openEntry();
   const carou=$('#carou');
   carou.addEventListener('scroll',()=>{const n=visibleAccounts().length;const i=Math.round(carou.scrollLeft/(carou.scrollWidth/n));
@@ -446,10 +512,15 @@ function shade(hex){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)
 function renderFeed(){
   const f=$('#homebody');
   const txs=[...STATE.transactions].sort((a,b)=>b.occurred_on.localeCompare(a.occurred_on)||(b.created_at-a.created_at));
-  if(txs.length===0){f.innerHTML=`<div class="empty fade"><div class="circ">${IC.receipt}</div><h3>Пока пусто</h3><p>Нажмите «+», чтобы добавить операцию.</p></div>`;return}
+  const densityBar=`<div class="densbar"><div class="seg dens">
+      <button data-dens="short" class="${DENSITY==='short'?'on':''}">Кратко</button>
+      <button data-dens="full" class="${DENSITY==='full'?'on':''}">Подробно</button>
+    </div></div>`;
+  if(txs.length===0){f.innerHTML=`<div class="pad fade">${densityBar}<div class="empty"><div class="circ">${IC.receipt}</div><h3>Пока пусто</h3><p>Нажмите «+», чтобы добавить операцию.</p></div></div>`;bindDensity();return}
   const weeks={};txs.forEach(t=>{const mon=mondayOf(t.occurred_on);(weeks[mon]=weeks[mon]||[]).push(t)});
   const mons=Object.keys(weeks).sort((a,b)=>b.localeCompare(a));
-  let html='<div class="pad fade">',lastMonth='';
+  const full=DENSITY==='full';
+  let html='<div class="pad fade">'+densityBar,lastMonth='';
   mons.forEach(mon=>{
     const ml=monthLabel(mon);if(ml!==lastMonth){html+=`<div class="month-div">${ml}</div>`;lastMonth=ml}
     const list=weeks[mon];const exp=list.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
@@ -460,18 +531,29 @@ function renderFeed(){
       if(t.type==='income'){ic=cHex('success');cls='inc';sign='+ ';sub=`<span style="color:var(--success)">доход</span>`}
       else{const r=respInfo(t.responsible);ic=cHex(r.color);cls='exp';sign='− ';sub=`<span class="dot" style="background:${ic}"></span>${esc(r.label)}`}
       const title=cat?.name||'—';
+      const subName=t.subcategory_id?((STATE.subcategories||[]).find(s=>s.id===t.subcategory_id)?.name):null;
       const det=(t.items&&t.items.length)?` · ${t.items.length} поз.`:'';
+      let extra='';
+      if(full){
+        const parts=[];
+        if(t.comment)parts.push(`<div class="tx-cmt">${esc(t.comment)}</div>`);
+        if(t.items&&t.items.length)parts.push(`<div class="tx-items">${t.items.map(i=>`<div class="ti"><span>${esc(i.name)}</span><span>${fmt0(i.amount)} ₽</span></div>`).join('')}</div>`);
+        if(parts.length)extra=`<div class="tx-extra">${parts.join('')}</div>`;
+      }
       html+=`<button class="txrow" data-tx="${t.id}">
         <div class="tx-ic" style="background:${ic}1A;color:${ic}">${esc(title[0])}</div>
-        <div class="tx-main"><div class="tx-name">${esc(title)}${det}</div>
-          <div class="tx-sub">${sub}<span>·</span><span>${esc(acc?.name||'')}</span>${author?`<span>·</span><span>${esc(author.firstName)}</span>`:''}</div></div>
+        <div class="tx-main"><div class="tx-name">${esc(title)}${subName?` · <span style="color:var(--text-3);font-weight:500">${esc(subName)}</span>`:''}${det}</div>
+          <div class="tx-sub">${sub}<span>·</span><span>${esc(acc?.name||'')}</span>${author?`<span>·</span><span>${esc(author.firstName)}</span>`:''}</div>
+          ${extra}</div>
         <div class="tx-amt ${cls}">${sign}${fmt(t.amount)} ₽</div></button>`;
     });
     html+='</div></div>';
   });
   html+='</div>';f.innerHTML=html;
-  f.querySelectorAll('[data-tx]').forEach(b=>b.onclick=()=>openTxActions(b.dataset.tx));
+  bindDensity();
+  f.querySelectorAll('[data-tx]').forEach(b=>b.onclick=()=>openTxDetail(b.dataset.tx));
 }
+function bindDensity(){$('#homebody').querySelectorAll('[data-dens]').forEach(b=>b.onclick=()=>{if(DENSITY===b.dataset.dens)return;DENSITY=b.dataset.dens;renderFeed()})}
 
 /* ---------- ANALYTICS ---------- */
 function periodRange(kind){
@@ -499,16 +581,24 @@ function donutSVG(segments){ // segments: [{color,value}]
 function renderStats(){
   const body=$('#homebody');
   const {start,end,label}=periodRange(PERIOD);
-  const inRange=STATE.transactions.filter(t=>t.occurred_on>=start&&t.occurred_on<=end);
+  const accs=visibleAccounts();
+  if(STAT_ACC!=='all' && !accs.some(a=>a.id===STAT_ACC)) STAT_ACC='all';
+  let inRange=STATE.transactions.filter(t=>t.occurred_on>=start&&t.occurred_on<=end);
+  if(STAT_ACC!=='all') inRange=inRange.filter(t=>t.account_id===STAT_ACC);
   const exp=inRange.filter(t=>t.type==='expense');
   const inc=inRange.filter(t=>t.type==='income');
   const expSum=exp.reduce((s,t)=>s+t.amount,0);
   const incSum=inc.reduce((s,t)=>s+t.amount,0);
   const net=incSum-expSum;
   const periods=[['day','День'],['week','Неделя'],['month','Месяц'],['year','Год']];
+  const accChips=`<div class="period" id="statacc">
+      <button data-sa="all" class="${STAT_ACC==='all'?'on':''}">Все счета</button>
+      ${accs.map(a=>`<button data-sa="${a.id}" class="${STAT_ACC===a.id?'on':''}">${esc(a.name)}</button>`).join('')}
+    </div>`;
 
   let html=`<div class="fade">
     <div class="period" id="period">${periods.map(([k,n])=>`<button data-p="${k}" class="${PERIOD===k?'on':''}">${n}</button>`).join('')}</div>
+    ${accChips}
     <div class="period-lbl">${esc(label)}</div>
     <div class="sumrow">
       <div class="sumcard"><div class="k">Расход</div><div class="v exp">${fmt0(expSum)} ₽</div></div>
@@ -517,7 +607,7 @@ function renderStats(){
     </div>`;
 
   if(expSum<=0){
-    html+=`<div class="empty" style="padding:34px 24px"><div class="circ">${IC.receipt}</div><h3>Нет расходов за период</h3><p>Выберите другой период или добавьте операции.</p></div></div>`;
+    html+=`<div class="empty" style="padding:34px 24px"><div class="circ">${IC.receipt}</div><h3>Нет расходов за период</h3><p>Выберите другой период или счёт.</p></div></div>`;
     body.innerHTML=html;
     bindPeriod(); return;
   }
@@ -525,7 +615,7 @@ function renderStats(){
   // по категориям
   const byCat={};
   exp.forEach(t=>{byCat[t.category_id]=(byCat[t.category_id]||0)+t.amount});
-  const catList=Object.entries(byCat).map(([id,v])=>({id,v,color:catColor(id),name:catById(id)?.name||'—'})).sort((a,b)=>b.v-a.v);
+  const catList=Object.entries(byCat).map(([id,v])=>({id,v,color:catColor(id),name:catById(id)?.name||'Без категории'})).sort((a,b)=>b.v-a.v);
   html+=`<div class="donutwrap"><div class="donut-c">${donutSVG(catList)}
     <div class="donut-center"><div class="dc-k">Расход</div><div class="dc-v">${fmt0(expSum)} ₽</div></div></div></div>
     <div class="sec-lbl">По категориям</div>
@@ -553,6 +643,9 @@ function bindPeriod(){
   $('#period')?.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
     if(PERIOD===b.dataset.p)return; PERIOD=b.dataset.p; renderStats();
   });
+  $('#statacc')?.querySelectorAll('[data-sa]').forEach(b=>b.onclick=()=>{
+    if(STAT_ACC===b.dataset.sa)return; STAT_ACC=b.dataset.sa; renderStats();
+  });
 }
 
 /* ---------- SHEET base ---------- */
@@ -560,25 +653,58 @@ function openSheet(html){$('#sheet').innerHTML=`<div class="grab"></div>`+html;$
 function closeSheet(){$('#scrim').classList.remove('show')}
 $('#scrim').addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});
 
-function openTxActions(id){
+function openTxDetail(id){
   const t=STATE.transactions.find(x=>x.id===id);if(!t)return;
-  const title=catById(t.category_id)?.name||'Запись';
-  openSheet(`<div class="s-title">${esc(title)} · ${t.type==='expense'?'−':'+'}${fmt(t.amount)} ₽</div>
-    <button class="s-item" data-a="edit">${IC.edit}<span>Редактировать</span></button>
-    <button class="s-item danger" data-a="del">${IC.trash}<span>Удалить</span></button>`);
-  $('#sheet').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{const a=b.dataset.a;closeSheet();
-    if(a==='edit')openEntry(t);if(a==='del'){db.deleteTx(id).then(()=>{STATE.transactions=STATE.transactions.filter(x=>x.id!==id);toast('Удалено');renderHome()}).catch(()=>toast('Не удалось удалить'))}});
+  const fab=$('#fab'); if(fab) fab.style.display='none';
+  const cat=catById(t.category_id),acc=accById(t.account_id),author=memberById(t.author_id);
+  const isInc=t.type==='income';
+  const subName=t.subcategory_id?((STATE.subcategories||[]).find(s=>s.id===t.subcategory_id)?.name):null;
+  const r=isInc?null:respInfo(t.responsible);
+  const accColor=acc?cHex(acc.color):getCss('--text-2');
+  const rows=[];
+  rows.push(['Тип', isInc?'Доход':'Расход']);
+  rows.push(['Категория', (cat?.name||'Без категории')+(subName?' · '+subName:'')]);
+  rows.push(['Счёт', `<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${accColor};display:inline-block"></span>${esc(acc?.name||'—')}</span>`,true]);
+  if(!isInc&&r) rows.push(['Ответственный', `<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:9px;height:9px;border-radius:50%;background:${cHex(r.color)};display:inline-block"></span>${esc(r.label)}</span>`,true]);
+  rows.push(['Кто внёс', esc(author?.firstName||'—')]);
+  rows.push(['Дата', fmtDate(t.occurred_on)]);
+  if(t.comment) rows.push(['Комментарий', esc(t.comment)]);
+
+  const itemsHtml=(t.items&&t.items.length)?`
+    <div class="sec-lbl">Позиции</div>
+    <div class="card" style="margin:0 16px">${t.items.map(i=>`<div class="row"><div class="grow"><div class="name">${esc(i.name)}</div></div><div class="val">${fmt0(i.amount)} ₽</div></div>`).join('')}</div>`:'';
+
+  const root=$('#entry-root');
+  root.innerHTML=`<div id="entry" class="up">
+    <div class="entry-top">
+      <button class="iconbtn" id="dClose">${IC.back}</button>
+      <div class="grow" style="text-align:center;font-family:'Nunito';font-weight:800;font-size:16px">Операция</div>
+      <button class="iconbtn" id="dEdit">${IC.edit}</button>
+    </div>
+    <div class="entry-amt"><div class="a ${isInc?'inc':'exp'}">${isInc?'+ ':'− '}${fmt(t.amount)} <span class="cur">₽</span></div></div>
+    <div class="entry-scroll">
+      <div class="card" style="margin:6px 16px 0">
+        ${rows.map(([k,v,raw])=>`<div class="row"><div class="grow"><div class="sub">${k}</div><div class="name" style="font-weight:600">${raw?v:esc(v)}</div></div></div>`).join('')}
+      </div>
+      ${itemsHtml}
+      <div style="padding:18px 16px 30px"><button class="btn btn-block" id="dDel" style="background:var(--danger-soft);color:var(--danger)">${IC.trash}<span>Удалить операцию</span></button></div>
+    </div>
+  </div>`;
+  const close=()=>{root.innerHTML='';const f=$('#fab');if(f)f.style.display='';};
+  $('#dClose').onclick=close;
+  $('#dEdit').onclick=()=>{root.innerHTML='';openEntry(t)};
+  $('#dDel').onclick=()=>{const backup={...t};close();removeTxLocal(id);softRefresh();toast('Удалено');db.deleteTx(id).catch(()=>{upsertTx(backup);softRefresh();toast('Не удалось удалить')})};
 }
 
 /* ============================================================ ENTRY */
 function openEntry(existing){
   const fab=$('#fab'); if(fab) fab.style.display='none';
   const u=me();
-  if(existing){DRAFT={...existing,amountStr:String(existing.amount),items:existing.items?existing.items.map(i=>({...i,amountStr:String(i.amount)})):null,showDet:!!(existing.items&&existing.items.length)}}
+  if(existing){DRAFT={...existing,amountStr:String(existing.amount),items:existing.items?existing.items.map(i=>({...i,amountStr:String(i.amount)})):null,showDet:!!(existing.items&&existing.items.length),subcategory_id:existing.subcategory_id||null}}
   else{
     const firstCat=STATE.categories.find(c=>c.type==='expense');
     const myAcc=STATE.accounts.find(a=>a.owner===u.id)||STATE.accounts[0];
-    DRAFT={id:null,type:'expense',amountStr:'',category_id:firstCat?.id,account_id:myAcc?.id,
+    DRAFT={id:null,type:'expense',amountStr:'',category_id:firstCat?.id,subcategory_id:null,account_id:myAcc?.id,
       responsible:me().id,author_id:u.id,occurred_on:todayISO(),
       comment:'',items:null,showDet:false};
   }
@@ -596,8 +722,21 @@ function currentAmount(){ // если есть детализация с поз�
    отдельных контейнеров, без пересоздания экрана (никакого мелькания). */
 function catsHTML(){
   const d=DRAFT;
-  return STATE.categories.filter(c=>c.type===d.type)
-    .map(c=>`<button class="chip ${c.id===d.category_id?'on':''}" data-cat="${c.id}">${esc(c.name)}</button>`).join('');
+  const list=STATE.categories.filter(c=>c.type===d.type);
+  let h=list.map(c=>`<button class="chip ${c.id===d.category_id?'on':''}" data-cat="${c.id}">${esc(c.name)}${c.id===d.category_id?`<span class="chip-edit" data-catedit="${c.id}">${IC.pencilS}</span>`:''}</button>`).join('');
+  h+=`<button class="chip chip-add" data-catadd="1">${IC.plusS} Категория</button>`;
+  return h;
+}
+/* подкатегории — только у расходов и только когда выбрана категория */
+function subsHTML(){
+  const d=DRAFT;
+  if(d.type!=='expense'||!d.category_id) return '';
+  const subs=subsOf(d.category_id);
+  let h=`<div class="lbl-min">Подкатегория</div><div class="chips" id="subs">`;
+  h+=`<button class="chip ${!d.subcategory_id?'on':''}" data-sub="">Без</button>`;
+  h+=subs.map(s=>`<button class="chip ${d.subcategory_id===s.id?'on':''}" data-sub="${s.id}">${esc(s.name)}</button>`).join('');
+  h+=`<button class="chip chip-add" data-subadd="1">${IC.plusS} Подкатегория</button></div>`;
+  return h;
 }
 function respWrapHTML(){
   const d=DRAFT;
@@ -608,19 +747,90 @@ function respWrapHTML(){
       <button class="chip resp-chip ${d.responsible==='shared'?'on':''}" data-r="shared" data-resp="shared"><span class="cd" style="background:var(--shared)"></span>Общее</button>
     </div>`;
 }
-function bindCatChips(){$('#cats').querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>setCategory(b.dataset.cat))}
+function bindCatChips(){
+  $('#cats').querySelectorAll('[data-cat]').forEach(b=>b.onclick=(e)=>{
+    if(e.target.closest('[data-catedit]')){openCatEdit(b.dataset.cat);return}
+    setCategory(b.dataset.cat);
+  });
+  const add=$('#cats').querySelector('[data-catadd]'); if(add) add.onclick=openCatCreate;
+}
+function bindSubChips(){
+  const w=$('#subs'); if(!w)return;
+  w.querySelectorAll('[data-sub]').forEach(b=>b.onclick=()=>setSubcategory(b.dataset.sub||null));
+  const add=w.querySelector('[data-subadd]'); if(add) add.onclick=()=>openSubCreate(DRAFT.category_id);
+}
 function bindRespChips(){const r=$('#resp');if(r)r.querySelectorAll('[data-resp]').forEach(b=>b.onclick=()=>setResponsible(b.dataset.resp))}
-function setCategory(id){DRAFT.category_id=id;$('#cats').querySelectorAll('[data-cat]').forEach(b=>b.classList.toggle('on',b.dataset.cat===id))}
+function setCategory(id){DRAFT.category_id=id;DRAFT.subcategory_id=null;
+  $('#cats').innerHTML=catsHTML();bindCatChips();refreshSubs()}
+function setSubcategory(id){DRAFT.subcategory_id=id;const w=$('#subs');if(w)w.querySelectorAll('[data-sub]').forEach(b=>b.classList.toggle('on',(b.dataset.sub||null)===(id||null)))}
 function setResponsible(id){DRAFT.responsible=id;const r=$('#resp');if(r)r.querySelectorAll('[data-resp]').forEach(b=>b.classList.toggle('on',b.dataset.resp===id))}
+function refreshSubs(){const w=$('#subWrap');if(w){w.innerHTML=subsHTML();bindSubChips()}}
+function refreshEntryCats(){const c=$('#cats');if(c){c.innerHTML=catsHTML();bindCatChips()}refreshSubs()}
 function setType(t){
   const d=DRAFT; if(d.type===t)return;
   d.type=t;
-  const fc=STATE.categories.find(c=>c.type===t); d.category_id=fc?.id;
+  const fc=STATE.categories.find(c=>c.type===t); d.category_id=fc?.id; d.subcategory_id=null;
   d.responsible=t==='expense'?me().id:null;
   $('#entry').querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('on',b.dataset.type===t));
   const a=$('#amt'); if(a){a.classList.toggle('exp',t==='expense');a.classList.toggle('inc',t==='income')}
   $('#cats').innerHTML=catsHTML(); bindCatChips();
+  refreshSubs();
   $('#respWrap').innerHTML=respWrapHTML(); bindRespChips();
+}
+
+/* ---- управление категориями/подкатегориями (в потоке ввода) ---- */
+let CATFORM={color:CAT_PALETTE[0]};
+function openCatCreate(){
+  CATFORM.color=CAT_PALETTE[0];
+  const sw=CAT_PALETTE.map(c=>`<button class="sw" data-cc="${c}" aria-pressed="${CATFORM.color===c}" style="background:${c}"></button>`).join('');
+  openSheet(`<div class="s-title">Новая категория</div>
+    <div class="s-input-row"><input class="input" id="catName" placeholder="Название" autocomplete="off"></div>
+    ${DRAFT.type==='expense'?`<div class="lbl-min" style="margin:6px 16px 4px">Цвет</div><div class="sw-row">${sw}</div>`:''}
+    <div style="padding:8px 16px 4px"><button class="btn btn-primary btn-block" id="catSave">Добавить</button></div>`);
+  $('#sheet').querySelectorAll('[data-cc]').forEach(b=>b.onclick=()=>{CATFORM.color=b.dataset.cc;$('#sheet').querySelectorAll('[data-cc]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.cc===CATFORM.color))});
+  setTimeout(()=>$('#catName')?.focus(),50);
+  $('#catSave').onclick=async()=>{
+    const name=$('#catName').value.trim(); if(!name){$('#catName').classList.add('err');return}
+    const sort=(STATE.categories.filter(c=>c.type===DRAFT.type).length)||0;
+    try{const row=await db.insertCategory({family_id:STATE.family.id,name,type:DRAFT.type,color:DRAFT.type==='expense'?CATFORM.color:null,sort});
+      upsertCat(row);closeSheet();DRAFT.category_id=row.id;DRAFT.subcategory_id=null;refreshEntryCats();toast('Категория добавлена')}
+    catch(ex){console.error(ex);toast('Не удалось добавить')}
+  };
+}
+function openCatEdit(catId){
+  const c=catById(catId); if(!c)return;
+  const subs=subsOf(catId);
+  const isExp=c.type==='expense';
+  openSheet(`<div class="s-title">${esc(c.name)}</div>
+    ${isExp?`<div class="lbl-min" style="margin:2px 16px 2px">Подкатегории</div>
+      <div id="subList">${subs.length?subs.map(s=>`<div class="s-sub"><span class="nm">${esc(s.name)}</span><button class="del" data-subdel="${s.id}">${IC.trash}</button></div>`).join(''):`<div style="padding:2px 16px 6px;color:var(--text-3);font-size:13.5px">Пока нет</div>`}</div>
+      <div class="s-input-row"><input class="input" id="newSub" placeholder="Новая подкатегория"><button class="btn btn-primary" id="addSubBtn" style="padding:0 18px">${IC.plusS}</button></div>`:''}
+    <div style="padding:10px 16px 4px"><button class="btn btn-block" id="catDel" style="background:var(--danger-soft);color:var(--danger)">Удалить категорию</button></div>`);
+  const bindDel=()=>$('#sheet').querySelectorAll('[data-subdel]').forEach(b=>b.onclick=async()=>{
+    const id=b.dataset.subdel; try{await db.deleteSub(id);removeSubLocal(id);if(DRAFT.subcategory_id===id)DRAFT.subcategory_id=null;openCatEdit(catId);refreshSubs()}catch(ex){toast('Не удалось удалить')}});
+  bindDel();
+  const add=$('#addSubBtn'); if(add) add.onclick=async()=>{
+    const name=$('#newSub').value.trim(); if(!name)return;
+    const sort=subsOf(catId).length;
+    try{const row=await db.insertSub({family_id:STATE.family.id,category_id:catId,name,sort});upsertSub(row);openCatEdit(catId);refreshSubs()}catch(ex){toast('Не удалось добавить')}
+  };
+  $('#catDel').onclick=async()=>{
+    try{await db.deleteCategory(catId);removeCatLocal(catId);STATE.subcategories=(STATE.subcategories||[]).filter(s=>s.category_id!==catId);
+      if(DRAFT.category_id===catId){const fc=STATE.categories.find(x=>x.type===DRAFT.type);DRAFT.category_id=fc?.id;DRAFT.subcategory_id=null}
+      closeSheet();refreshEntryCats();softRefresh();toast('Категория удалена')}
+    catch(ex){console.error(ex);toast('Не удалось удалить')}
+  };
+}
+function openSubCreate(catId){
+  openSheet(`<div class="s-title">Новая подкатегория</div>
+    <div class="s-input-row"><input class="input" id="subName" placeholder="Название"><button class="btn btn-primary" id="subSave" style="padding:0 18px">${IC.check}</button></div>`);
+  setTimeout(()=>$('#subName')?.focus(),50);
+  $('#subSave').onclick=async()=>{
+    const name=$('#subName').value.trim(); if(!name){$('#subName').classList.add('err');return}
+    const sort=subsOf(catId).length;
+    try{const row=await db.insertSub({family_id:STATE.family.id,category_id:catId,name,sort});upsertSub(row);closeSheet();DRAFT.subcategory_id=row.id;refreshSubs();toast('Подкатегория добавлена')}
+    catch(ex){console.error(ex);toast('Не удалось добавить')}
+  };
 }
 function setDet(open){
   const d=DRAFT; d.showDet=open;
@@ -652,6 +862,7 @@ function renderEntry(){
     <div class="entry-scroll">
       <div class="lbl-min">Категория</div>
       <div class="chips" id="cats">${catsHTML()}</div>
+      <div id="subWrap">${subsHTML()}</div>
       <div id="respWrap">${respWrapHTML()}</div>
       <div class="lbl-min"><span>Детализация</span><button class="dettoggle" id="detToggle">${d.showDet?'скрыть':'разбить по позициям'}</button></div>
       <div id="detArea"></div>
@@ -672,6 +883,7 @@ function renderEntry(){
   $('#eClose').onclick=closeEntry;
   $('#entry').querySelectorAll('[data-type]').forEach(b=>b.onclick=()=>setType(b.dataset.type));
   bindCatChips();
+  bindSubChips();
   bindRespChips();
   $('#comment').oninput=e=>d.comment=e.target.value;
   $('#detToggle').onclick=()=>setDet(!d.showDet);
@@ -783,16 +995,27 @@ async function confirmEntry(){
   if(!d.category_id){toast('Выберите категорию');return}
   let items=null;
   if(d.showDet&&d.items){items=d.items.filter(i=>parseFloat(i.amountStr)>0).map(i=>({name:i.name?.trim()||'Позиция',amount:parseFloat(i.amountStr)}));if(items.length===0)items=null}
-  const ok=$('#kOk'); if(ok) ok.style.opacity=.5;
   const payload={family_id:STATE.family.id,type:d.type,amount,account_id:d.account_id,category_id:d.category_id,
+    subcategory_id:d.type==='expense'?(d.subcategory_id||null):null,
     responsible:d.type==='expense'?d.responsible:null,author_id:d.author_id||STATE.session,
     occurred_on:d.occurred_on,comment:d.comment?.trim()||null,items};
-  try{
-    if(d.id){const row=await db.updateTx(d.id,payload);const i=STATE.transactions.findIndex(t=>t.id===d.id);if(i>=0)STATE.transactions[i]=row}
-    else{const row=await db.insertTx(payload);STATE.transactions.push(row)}
-    toast(d.id?'Сохранено':(d.type==='income'?'Доход добавлен':'Трата добавлена'));
-    closeEntry();
-  }catch(ex){console.error(ex);if(ok)ok.style.opacity=1;toast('Не удалось сохранить')}
+  const editId=d.id;
+  // оптимистично: показываем сразу, пишем в фоне
+  if(editId){
+    const prev=STATE.transactions.find(t=>t.id===editId);
+    const backup=prev?{...prev}:null;
+    if(prev)Object.assign(prev,payload,{id:editId});
+    closeEntry();softRefresh();
+    try{const row=await db.updateTx(editId,payload);upsertTx(row);softRefresh()}
+    catch(ex){console.error(ex);if(backup)upsertTx(backup);softRefresh();toast('Не удалось сохранить')}
+  }else{
+    const tmpId='tmp_'+Math.random().toString(36).slice(2,9);
+    STATE.transactions.push({...payload,id:tmpId,created_at:Date.now()});
+    toast(d.type==='income'?'Доход добавлен':'Трата добавлена');
+    closeEntry();softRefresh();
+    try{const row=await db.insertTx(payload);removeTxLocal(tmpId);upsertTx(row);softRefresh()}
+    catch(ex){console.error(ex);removeTxLocal(tmpId);softRefresh();toast('Не удалось сохранить')}
+  }
 }
 
 function toggleTheme(){const cur=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';document.documentElement.setAttribute('data-theme',cur);localStorage.setItem('familybag_theme',cur)}
@@ -803,7 +1026,7 @@ function toggleTheme(){const cur=document.documentElement.getAttribute('data-the
   ROUTE='boot';render();
   try{
     const user=await db.currentUser();
-    if(user){ STATE=await db.loadAll(); ROUTE='home'; }
+    if(user){ STATE=await db.loadAll(); ROUTE='home'; subscribeRealtime(); }
     else { ROUTE='login'; }
   }catch(ex){ console.error(ex); ROUTE='login'; }
   render();
