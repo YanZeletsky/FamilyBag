@@ -244,6 +244,21 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .legend .nm{flex:1;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .legend .pc{font-size:12.5px;color:var(--text-3);width:42px;text-align:right}
 .legend .am{font-family:'Nunito';font-weight:700;font-size:14px;width:96px;text-align:right}
+.catlist{margin-top:2px}
+.catitem + .catitem{border-top:1px solid var(--border)}
+.catrow{display:flex;align-items:center;gap:10px;padding:12px 4px;width:100%;text-align:left;background:none}
+.catrow:active{background:var(--surface-2)}
+.catrow .sw{width:12px;height:12px;border-radius:4px;flex:none}
+.catrow .nm{flex:1;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.catrow .pc{font-size:12.5px;color:var(--text-3);width:40px;text-align:right;flex:none}
+.catrow .am{font-family:'Nunito';font-weight:700;font-size:14px;width:104px;text-align:right;flex:none}
+.catrow .chev{width:18px;color:var(--text-3);transition:transform .2s;flex:none;display:grid;place-items:center}
+.catitem.open .catrow .chev{transform:rotate(180deg)}
+.sublist{counter-reset:sub;display:none;padding:0 4px 8px 30px}
+.catitem.open .sublist{display:block}
+.subrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;color:var(--text-2);counter-increment:sub}
+.subrow .sname::before{content:counter(sub)". ";color:var(--text-3);font-weight:600}
+.subrow .samt{font-family:'Nunito';font-weight:700;white-space:nowrap;color:var(--text)}
 .whobox{padding:6px 16px 0}
 .whorow{margin-bottom:14px}
 .whorow .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
@@ -275,8 +290,15 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .lc-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
 .lc-name{font-weight:700;font-size:15px;font-family:'Nunito'}
 .lc-val{font-family:'Nunito';font-weight:700;font-size:14px}
-.lc-bar{height:10px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
-.lc-bar i{display:block;height:100%;border-radius:var(--r-pill);transition:width .3s ease}
+.lc-bar{position:relative;height:12px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
+.lc-bar i{display:block;height:100%;border-radius:var(--r-pill);transition:width .3s ease;position:relative;z-index:1}
+.lc-tick{position:absolute;top:0;bottom:0;width:2px;background:var(--bg);opacity:.7;z-index:2;transform:translateX(-1px)}
+@media (prefers-reduced-motion:no-preference){
+  .lc-bar.near i{animation:limitPulse 1.6s ease-in-out infinite}
+  .lc-bar.over i{animation:limitPulseOver 1s ease-in-out infinite}
+}
+@keyframes limitPulse{0%,100%{opacity:1}50%{opacity:.62}}
+@keyframes limitPulseOver{0%,100%{opacity:1;filter:none}50%{opacity:.75;filter:brightness(1.15)}}
 .lc-sub{font-size:12.5px;color:var(--text-3);margin-top:6px}
 </style>
 </head>
@@ -372,7 +394,7 @@ const db={
 /* ============================================================ HELPERS */
 const $=(s,r=document)=>r.querySelector(s);
 const app=$('#app');
-let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, STAT_ACC='all', DENSITY='short';
+let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, STAT_ACC=null, DENSITY='short', STAT_OPEN={};
 
 /* точечное обновление данных операций + мягкая перерисовка */
 function upsertTx(row){const i=STATE.transactions.findIndex(t=>t.id===row.id);if(i>=0)STATE.transactions[i]=row;else STATE.transactions.push(row)}
@@ -449,6 +471,7 @@ const IC={
   eyeOff:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.2 2.9M6.7 6.7A13.3 13.3 0 0 0 2 11s3.5 7 10 7a9 9 0 0 0 3.3-.6M3 3l18 18M9.9 9.9a3 3 0 0 0 4.2 4.2"/></svg>',
   pencilS:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   xS:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+  chev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
 };
 
 /* ============================================================ РЕНДЕР */
@@ -608,10 +631,14 @@ function renderLimits(){
       const lim=limitOf(c.id).amount, sp=spentThisMonth(c.id);
       const pct=lim>0?Math.min(100,Math.round(sp/lim*100)):0;
       const over=sp>lim;
-      const barCol=over?'var(--danger)':(pct>=80?'var(--warning)':(c.color||'var(--brand)'));
+      const near=!over&&pct>=80;
+      const barCol=over?'var(--danger)':(near?'var(--warning)':(c.color||'var(--brand)'));
+      // засечки по неделям месяца (доли ~ по 7 дней)
+      const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+      const ticks=[7,14,21,28].filter(d=>d<daysInMonth).map(d=>`<span class="lc-tick" style="left:${(d/daysInMonth*100).toFixed(1)}%"></span>`).join('');
       html+=`<button class="limitcard" data-lim="${c.id}">
         <div class="lc-top"><span class="lc-name">${esc(c.name)}</span><span class="lc-val" style="color:${over?'var(--danger)':'var(--text)'}">${fmt0(sp)} / ${fmt0(lim)} ₽</span></div>
-        <div class="lc-bar"><i style="width:${pct}%;background:${barCol}"></i></div>
+        <div class="lc-bar ${over?'over':(near?'near':'')}"><i style="width:${pct}%;background:${barCol}"></i>${ticks}</div>
         <div class="lc-sub">${over?`превышен на ${fmt0(sp-lim)} ₽`:`осталось ${fmt0(lim-sp)} ₽`}</div>
       </button>`;
     });
@@ -672,9 +699,8 @@ function renderStats(){
   const body=$('#homebody');
   const {start,end,label}=periodRange(PERIOD);
   const accs=visibleAccounts();
-  if(STAT_ACC!=='all' && !accs.some(a=>a.id===STAT_ACC)) STAT_ACC='all';
-  let inRange=STATE.transactions.filter(t=>t.occurred_on>=start&&t.occurred_on<=end);
-  if(STAT_ACC!=='all') inRange=inRange.filter(t=>t.account_id===STAT_ACC);
+  if(!accs.some(a=>a.id===STAT_ACC)) STAT_ACC=(accs.find(a=>a.owner===STATE.session)||accs[0])?.id;
+  let inRange=STATE.transactions.filter(t=>t.occurred_on>=start&&t.occurred_on<=end&&t.account_id===STAT_ACC);
   const exp=inRange.filter(t=>t.type==='expense');
   const inc=inRange.filter(t=>t.type==='income');
   const expSum=exp.reduce((s,t)=>s+t.amount,0);
@@ -682,7 +708,6 @@ function renderStats(){
   const net=incSum-expSum;
   const periods=[['day','День'],['week','Неделя'],['month','Месяц'],['year','Год']];
   const accChips=`<div class="period" id="statacc">
-      <button data-sa="all" class="${STAT_ACC==='all'?'on':''}">Все счета</button>
       ${accs.map(a=>`<button data-sa="${a.id}" class="${STAT_ACC===a.id?'on':''}">${esc(a.name)}</button>`).join('')}
     </div>`;
 
@@ -698,40 +723,41 @@ function renderStats(){
 
   if(expSum<=0){
     html+=`<div class="empty" style="padding:34px 24px"><div class="circ">${IC.receipt}</div><h3>Нет расходов за период</h3><p>Выберите другой период или счёт.</p></div></div>`;
-    body.innerHTML=html;
-    bindPeriod(); return;
+    body.innerHTML=html; bindPeriod(); return;
   }
 
-  // по категориям
+  // категории с раскрытием подкатегорий
   const byCat={};
   exp.forEach(t=>{byCat[t.category_id]=(byCat[t.category_id]||0)+t.amount});
   const catList=Object.entries(byCat).map(([id,v])=>({id,v,color:catColor(id),name:catById(id)?.name||'Без категории'})).sort((a,b)=>b.v-a.v);
-  html+=`<div class="donutwrap"><div class="donut-c">${donutSVG(catList)}
-    <div class="donut-center"><div class="dc-k">Расход</div><div class="dc-v">${fmt0(expSum)} ₽</div></div></div></div>
-    <div class="sec-lbl">По категориям</div>
-    <div class="legend">${catList.map(c=>`<div class="li">
-      <span class="sw" style="background:${c.color}"></span>
-      <span class="nm">${esc(c.name)}</span>
-      <span class="pc">${Math.round(c.v/expSum*100)}%</span>
-      <span class="am">${fmt(c.v)} ₽</span></div>`).join('')}</div>`;
-
-  // по счетам (сколько расхода с каждого счёта)
-  if(STAT_ACC==='all'){
-    const byAcc={};
-    exp.forEach(t=>{byAcc[t.account_id]=(byAcc[t.account_id]||0)+t.amount});
-    const accRows=accs.filter(a=>byAcc[a.id]>0).sort((x,y)=>byAcc[y.id]-byAcc[x.id]);
-    if(accRows.length){
-      html+=`<div class="sec-lbl">По счетам</div><div class="whobox">`;
-      accRows.forEach(a=>{const v=byAcc[a.id];const h=cHex(a.color);const pct=Math.round(v/expSum*100);
-        html+=`<div class="whorow"><div class="top"><span class="nm"><span class="d" style="background:${h}"></span>${esc(a.name)}</span><span class="am">${fmt(v)} ₽ · ${pct}%</span></div>
-          <div class="bar"><i style="width:${pct}%;background:${h}"></i></div></div>`;
-      });
-      html+=`</div>`;
-    }
-  }
-  html+=`<div style="height:20px"></div></div>`;
+  html+=`<div class="sec-lbl">По категориям</div><div class="catlist">`;
+  catList.forEach(c=>{
+    // подкатегории внутри категории
+    const bySub={};
+    exp.filter(t=>t.category_id===c.id).forEach(t=>{const k=t.subcategory_id||'none';bySub[k]=(bySub[k]||0)+t.amount});
+    const subRows=Object.entries(bySub).map(([sid,v])=>({sid,v,name:sid==='none'?'Без подкатегории':((STATE.subcategories||[]).find(s=>s.id===sid)?.name||'Подкатегория')})).sort((a,b)=>b.v-a.v);
+    const hasSubs=subRows.length>1||(subRows.length===1&&subRows[0].sid!=='none');
+    const open=!!STAT_OPEN[c.id];
+    html+=`<div class="catitem ${open?'open':''}">
+      <button class="catrow" ${hasSubs?`data-cat="${c.id}"`:''}>
+        <span class="sw" style="background:${c.color}"></span>
+        <span class="nm">${esc(c.name)}</span>
+        <span class="pc">${Math.round(c.v/expSum*100)}%</span>
+        <span class="am">${fmt(c.v)} ₽</span>
+        <span class="chev" style="${hasSubs?'':'visibility:hidden'}">${IC.chev}</span>
+      </button>
+      <div class="sublist">${subRows.map(s=>`<div class="subrow"><span class="sname">${esc(s.name)}</span><span class="samt">${fmt(s.v)} ₽</span></div>`).join('')}</div>
+    </div>`;
+  });
+  html+=`</div><div style="height:20px"></div></div>`;
   body.innerHTML=html;
   bindPeriod();
+  body.querySelectorAll('[data-cat]').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.cat; const item=b.closest('.catitem');
+    const willOpen=!item.classList.contains('open');
+    item.classList.toggle('open',willOpen);
+    if(willOpen)STAT_OPEN[id]=1; else delete STAT_OPEN[id];
+  });
 }
 function bindPeriod(){
   $('#period')?.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
