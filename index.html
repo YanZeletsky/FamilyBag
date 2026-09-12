@@ -91,9 +91,7 @@
 :root[data-theme="dark"] .iconbtn,
 :root[data-theme="dark"] .btn-ghost,
 :root[data-theme="dark"] .ordbtn,
-:root[data-theme="dark"] .tx-ic,
-:root[data-theme="dark"] .limitcard,
-:root[data-theme="dark"] .fab{position:relative;isolation:isolate;border-color:transparent;background-color:transparent}
+:root[data-theme="dark"] .tx-ic{position:relative;isolation:isolate;border-color:transparent;background-color:transparent}
 
 :root[data-theme="dark"] .card::before,
 :root[data-theme="dark"] .limitcard::before,
@@ -161,8 +159,17 @@
 }
 :root[data-theme="dark"] .htabs button.on,
 :root[data-theme="dark"] .seg button.on{background:transparent;box-shadow:none}
+:root[data-theme="dark"] .htabs,
+:root[data-theme="dark"] .seg{background:transparent}
+:root[data-theme="dark"] .htabs::before,
+:root[data-theme="dark"] .htabs::after,
+:root[data-theme="dark"] .seg::before,
+:root[data-theme="dark"] .seg::after{display:none}
+:root[data-theme="dark"] .chip,
+:root[data-theme="dark"] .period button,
+:root[data-theme="dark"] .opsfilter button{border-width:0}
 /* карточки счетов: цвет владельца + зерно + радужный подмес */
-:root[data-theme="dark"] .acard{position:relative;isolation:isolate}
+:root[data-theme="dark"] .acard{position:relative;isolation:isolate;background:rgba(255,255,255,.03)!important;box-shadow:none}
 :root[data-theme="dark"] .acard::before{
   content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
   filter:blur(12px) saturate(.7);
@@ -178,7 +185,7 @@
 }
 :root[data-theme="dark"] .acard>*{position:relative;z-index:1}
 /* кнопка «плюс»: радужный перелив, зерно, пыль, ореол */
-:root[data-theme="dark"] .fab{background:none;color:#1A1220}
+:root[data-theme="dark"] .fab{background:none;color:#1A1220;isolation:isolate}
 :root[data-theme="dark"] .fab::before{
   content:"";position:absolute;inset:0;z-index:-2;border-radius:50%;pointer-events:none;
   background:conic-gradient(from 200deg, var(--him), var(--sky), var(--lilac), var(--her), var(--sun), var(--shared), var(--lime), var(--him));
@@ -192,8 +199,8 @@
 }
 /* поля ввода: зерно фоном (у input псевдоэлементы не работают) */
 :root[data-theme="dark"] .input{
-  background-color:rgba(255,255,255,.05);background-image:var(--noise);
-  background-size:110px 110px;background-blend-mode:screen;border-color:rgba(255,255,255,.09);
+  background-color:rgba(255,255,255,.05);
+  border-color:rgba(255,255,255,.08);
 }
 :root[data-theme="dark"] .input:focus{border-color:var(--brand)}
 /* разделители — тающий след из частиц, не линии */
