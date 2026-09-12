@@ -32,7 +32,7 @@
    края растворяются маской.
    ============================================================ */
 :root[data-theme="dark"]{
-  --bg:#14121C;
+  --bg:#120F19;
   --surface:transparent; --surface-2:rgba(255,255,255,.045);
   --border:transparent; --border-strong:rgba(255,255,255,.1);
   --text:#F4EDE4; --text-2:#BDB0C0; --text-3:#8D8296;
@@ -96,9 +96,6 @@
 :root[data-theme="dark"] .card::before,
 :root[data-theme="dark"] .limitcard::before,
 :root[data-theme="dark"] .sheet::before,
-:root[data-theme="dark"] .chip::before,
-:root[data-theme="dark"] .period button::before,
-:root[data-theme="dark"] .opsfilter button::before,
 :root[data-theme="dark"] .seg::before,
 :root[data-theme="dark"] .htabs::before,
 :root[data-theme="dark"] .key::before,
@@ -137,6 +134,17 @@
 }
 /* маркеры категорий — ярче, как в превью */
 :root[data-theme="dark"] .tx-ic::before{opacity:.5;filter:saturate(.8) blur(6px)}
+:root[data-theme="dark"] .card::before{opacity:.12}
+:root[data-theme="dark"] .card::after{opacity:.09}
+:root[data-theme="dark"] .card::before,
+:root[data-theme="dark"] .card::after,
+:root[data-theme="dark"] .limitcard::before,
+:root[data-theme="dark"] .limitcard::after{
+  -webkit-mask-image:radial-gradient(92% 100% at 50% 44%, #000 14%, rgba(0,0,0,.7) 40%, rgba(0,0,0,.3) 62%, transparent 86%)!important;
+          mask-image:radial-gradient(92% 100% at 50% 44%, #000 14%, rgba(0,0,0,.7) 40%, rgba(0,0,0,.3) 62%, transparent 86%)!important;
+}
+:root[data-theme="dark"] .limitcard::before{opacity:.16}
+:root[data-theme="dark"] .limitcard::after{opacity:.12}
 :root[data-theme="dark"] .tx-ic::after{opacity:.34;background-size:90px 90px}
 /* активные состояния — насыщеннее */
 :root[data-theme="dark"] .chip.on::before,
@@ -169,19 +177,25 @@
 :root[data-theme="dark"] .period button,
 :root[data-theme="dark"] .opsfilter button{border-width:0}
 /* карточки счетов: цвет владельца + зерно + радужный подмес */
-:root[data-theme="dark"] .acard{position:relative;isolation:isolate;background:rgba(255,255,255,.03)!important;box-shadow:none}
+:root[data-theme="dark"] .acard{position:relative;isolation:isolate;
+  background:rgba(255,255,255,.028)!important;box-shadow:none}
+/* маска гасит материал ДО края карточки — обрезки не видно */
+:root[data-theme="dark"] .acard::before,
+:root[data-theme="dark"] .acard::after{
+  -webkit-mask-image:radial-gradient(88% 96% at 50% 44%, #000 12%, rgba(0,0,0,.75) 38%, rgba(0,0,0,.35) 58%, rgba(0,0,0,.1) 74%, transparent 88%)!important;
+          mask-image:radial-gradient(88% 96% at 50% 44%, #000 12%, rgba(0,0,0,.75) 38%, rgba(0,0,0,.35) 58%, rgba(0,0,0,.1) 74%, transparent 88%)!important;
+}
 :root[data-theme="dark"] .acard::before{
-  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
-  filter:blur(12px) saturate(.7);
-  background:
-    radial-gradient(44% 52% at 16% 20%, var(--sky), transparent 72%),
-    radial-gradient(46% 54% at 84% 30%, var(--lilac), transparent 72%),
-    radial-gradient(48% 56% at 40% 92%, var(--her), transparent 74%);
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.3;
+  border-radius:inherit;
+  filter:saturate(.75) blur(9px);
+  background:var(--tint);
+  -webkit-mask-image:var(--tint-melt); mask-image:var(--tint-melt);
 }
 :root[data-theme="dark"] .acard::after{
-  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;
   background-image:var(--noise);background-size:150px 150px;
-  -webkit-mask-image:var(--melt);mask-image:var(--melt);opacity:.24;
+  -webkit-mask-image:var(--melt);mask-image:var(--melt);opacity:.2;
 }
 :root[data-theme="dark"] .acard>*{position:relative;z-index:1}
 /* кнопка «плюс»: радужный перелив, зерно, пыль, ореол */
