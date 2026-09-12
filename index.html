@@ -202,6 +202,38 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .sheet .s-opt.on{background:var(--brand-soft);color:var(--brand-strong)}
 .sheet .s-opt .chk{margin-left:auto;color:var(--brand)}
 .ordbtn{width:36px;height:36px;border-radius:var(--r-sm);background:var(--surface-2);border:1px solid var(--border);font-size:16px;font-weight:700;color:var(--text-2);flex:none}
+/* ---------- CALENDAR ---------- */
+.secbtn{display:flex;align-items:center;gap:6px;text-align:left;background:none}
+.secbtn svg{color:var(--text-3);flex:none}
+.calwrap{padding:0 12px}
+.calhead{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 6px}
+.calhead .cmn{font-family:'Nunito';font-weight:800;font-size:17px;text-transform:capitalize}
+.calgrid-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px}
+.cwd{text-align:center;font-size:11px;font-weight:700;color:var(--text-3);padding:4px 0;text-transform:lowercase}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.ccell{min-height:82px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--border);padding:4px 3px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left;overflow:hidden}
+.ccell.mut{background:transparent;border-color:transparent}
+.ccell.mut .cnum{color:var(--text-3);opacity:.4}
+.ccell.today{border-color:var(--brand);background:var(--brand-soft)}
+.ccell .cnum{font-family:'Nunito';font-weight:800;font-size:13px;color:var(--text);padding-left:2px}
+.ccell.today .cnum{color:var(--brand-strong)}
+.ccell .cevs{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cev{font-size:9.5px;font-weight:600;padding:2px 3px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.cmore{font-size:9px;color:var(--text-3);font-weight:700;padding-left:3px}
+.allday{display:flex;flex-direction:column;gap:5px;padding:8px 2px}
+.adev{text-align:left;font-size:13px;font-weight:600;padding:8px 10px;border-radius:var(--r-sm)}
+.hours{position:relative;margin-top:6px;padding-left:46px}
+.hrow{position:relative;height:54px}
+.hlbl{position:absolute;left:-46px;top:-7px;font-size:10.5px;color:var(--text-3);font-weight:600;width:42px;text-align:right}
+.hline{position:absolute;left:0;right:0;top:0;height:1px;background:var(--border)}
+.hevents{position:absolute;left:46px;right:0;top:0;bottom:0}
+.hev{position:absolute;left:2px;right:2px;border-radius:var(--r-sm);padding:5px 8px;text-align:left;overflow:hidden;display:flex;flex-direction:column;gap:1px}
+.hev-t{font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hev-s{font-size:10.5px;color:var(--text-2)}
+.evform{padding:4px 16px 8px;display:flex;flex-direction:column;gap:8px}
+.evpick{display:flex;align-items:center;gap:8px;text-align:left;color:var(--text)}
+.evrow{display:flex;align-items:center;gap:8px}
+.evdash{color:var(--text-3);font-weight:700}
 .ordbtn:disabled{opacity:.35}
 .ordbtn:active:not(:disabled){background:var(--border)}
 
@@ -358,17 +390,18 @@ const db={
   /* грузим всё пространство семьи в память (RLS отдаёт только свою семью) */
   async loadAll(){
     const user=await this.currentUser(); if(!user) return null;
-    const [mem,acc,cat,sub,tx,lim]=await Promise.all([
+    const [mem,acc,cat,sub,tx,lim,ev]=await Promise.all([
       sb.from('members').select('*'),
       sb.from('accounts').select('*').order('sort'),
       sb.from('categories').select('*').order('sort'),
       sb.from('subcategories').select('*').order('sort'),
       sb.from('transactions').select('*'),
       sb.from('limits').select('*'),
+      sb.from('events').select('*').order('starts_at'),
     ]);
-    if(mem.error||acc.error||cat.error||sub.error||tx.error||lim.error){
-      console.error(mem.error||acc.error||cat.error||sub.error||tx.error||lim.error);
-      throw (mem.error||acc.error||cat.error||sub.error||tx.error||lim.error);
+    if(mem.error||acc.error||cat.error||sub.error||tx.error||lim.error||ev.error){
+      console.error(mem.error||acc.error||cat.error||sub.error||tx.error||lim.error||ev.error);
+      throw (mem.error||acc.error||cat.error||sub.error||tx.error||lim.error||ev.error);
     }
     const members=(mem.data||[]).map(normMember);
     const meMember=members.find(m=>m.id===user.id);
@@ -380,6 +413,7 @@ const db={
       subcategories:sub.data||[],
       transactions:(tx.data||[]).map(normTx),
       limits:(lim.data||[]).map(l=>({...l,amount:Number(l.amount)||0})),
+      events:ev.data||[],
       session:user.id,
     };
   },
@@ -407,12 +441,18 @@ const db={
     if(error) throw error; return {...data,amount:Number(data.amount)||0};
   },
   async deleteLimit(categoryId,accountId){const {error}=await sb.from('limits').delete().eq('category_id',categoryId).eq('account_id',accountId);if(error) throw error;},
+  async insertEvent(payload){const {data,error}=await sb.from('events').insert(payload).select().single();if(error) throw error;return data;},
+  async updateEvent(id,payload){const {data,error}=await sb.from('events').update(payload).eq('id',id).select().single();if(error) throw error;return data;},
+  async deleteEvent(id){const {error}=await sb.from('events').delete().eq('id',id);if(error) throw error;},
 };
 
 /* ============================================================ HELPERS */
 const $=(s,r=document)=>r.querySelector(s);
 const app=$('#app');
 let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, ACC_ID=null, OPS_FILTER='all', STAT_OPEN={}, TABS=null;
+/* раздел приложения: money | cal */
+let SECTION='money', CAL_VIEW='month', CAL_Y=null, CAL_M=null, CAL_DAY=null, CAL_FILTER='all', EDRAFT=null;
+const EVENT_COLORS=['#2E6B4F','#57B4E8','#E0A33D','#EC5F86','#8B6DF0','#E5484D','#2AA6A0','#E5844D'];
 /* активный счёт = выбранный в карусели; общий переключатель контекста для всех вкладок */
 function activeAcc(){const accs=visibleAccounts();if(!accs.some(a=>a.id===ACC_ID))ACC_ID=accs[CAROU_IDX]?.id||accs[0]?.id;return ACC_ID}
 const TAB_DEFS={ops:'Операции',stats:'Аналитика',limits:'Лимиты'};
@@ -459,6 +499,12 @@ function subscribeRealtime(){
       if(payload.eventType==='DELETE'){removeLimitLocal(payload.old.category_id,payload.old.account_id)}else{upsertLimit({...payload.new,amount:Number(payload.new.amount)||0})}
       softRefresh();
     })
+    .on('postgres_changes',{event:'*',schema:'public',table:'events'},payload=>{
+      STATE.events=STATE.events||[];
+      if(payload.eventType==='DELETE'){STATE.events=STATE.events.filter(e=>e.id!==payload.old.id)}
+      else{const i=STATE.events.findIndex(e=>e.id===payload.new.id);if(i>=0)STATE.events[i]=payload.new;else STATE.events.push(payload.new)}
+      if(SECTION==='cal')renderCalBody();
+    })
     .subscribe();
 }
 function unsubscribeRealtime(){if(RT){sb.removeChannel(RT);RT=null}}
@@ -503,13 +549,14 @@ const IC={
   pencilS:'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
   xS:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   chev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  cal2:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
 };
 
 /* ============================================================ РЕНДЕР */
 function render(){
   if(ROUTE==='boot') return renderBoot();
   if(!STATE||!STATE.session) return renderLogin();
-  return renderHome();
+  return SECTION==='cal'?renderCal():renderHome();
 }
 function renderBoot(){app.innerHTML=`<div class="pad" style="padding:70px 16px"><div style="height:170px;border-radius:28px;background:var(--surface-2)"></div></div>`}
 
@@ -556,7 +603,7 @@ function visibleAccounts(){return STATE.accounts.filter(a=>!a.owner||a.owner===S
 function renderHome(){
   app.innerHTML=`
   <div class="topbar">
-    <div class="ttl grow">Кошелёк семьи</div>
+    <button class="ttl grow secbtn" id="secSwitch">Кошелёк семьи ${IC.chev}</button>
     <button class="iconbtn" id="btnTheme" title="Тема">${IC.theme}</button>
     <button class="iconbtn" id="btnOut" title="Выйти">${IC.logout}</button>
   </div>
@@ -578,6 +625,7 @@ function renderHome(){
   <button class="fab" id="fab">${IC.plus}</button>`;
   if(!tabOrder().includes(HOME_VIEW)) HOME_VIEW=tabOrder()[0];
   $('#btnTheme').onclick=toggleTheme;
+  $('#secSwitch').onclick=openSectionSwitch;
   $('#btnOut').onclick=async()=>{unsubscribeRealtime();await db.logout();STATE=null;ROUTE='login';TABS=null;render()};
   $('#fab').onclick=()=>openEntry();
   const carou=$('#carou');
@@ -840,6 +888,283 @@ function bindPeriod(){
   $('#period')?.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
     if(PERIOD===b.dataset.p)return; PERIOD=b.dataset.p; renderStats();
   });
+}
+
+/* ============================================================ КАЛЕНДАРЬ */
+function openSectionSwitch(){
+  openSheet(`<div class="s-title">Раздел</div><div class="s-choose">
+    <button class="s-opt ${SECTION==='money'?'on':''}" data-sec="money">${IC.money}<span>Кошелёк семьи</span>${SECTION==='money'?`<span class="chk">${IC.check}</span>`:''}</button>
+    <button class="s-opt ${SECTION==='cal'?'on':''}" data-sec="cal">${IC.cal2}<span>Календарь семьи</span>${SECTION==='cal'?`<span class="chk">${IC.check}</span>`:''}</button>
+  </div>`);
+  $('#sheet').querySelectorAll('[data-sec]').forEach(b=>b.onclick=()=>{
+    const s=b.dataset.sec;closeSheet();
+    if(SECTION===s)return; SECTION=s; render();
+  });
+}
+/* helpers дат/событий */
+function evColor(e){
+  if(e.color)return e.color;
+  if(e.scope==='shared')return cHex('shared');
+  const m=memberById(e.owner_id); return m?cHex(m.color):cHex('brand');
+}
+function ownerColor(e){
+  if(e.scope==='shared')return cHex('shared');
+  const m=memberById(e.owner_id); return m?cHex(m.color):cHex('brand');
+}
+function isoOf(dt){const d=new Date(dt);return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
+function hhmm(dt){const d=new Date(dt);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+function calEvents(){
+  let list=(STATE.events||[]);
+  if(CAL_FILTER==='shared')list=list.filter(e=>e.scope==='shared');
+  else if(CAL_FILTER!=='all')list=list.filter(e=>e.scope==='personal'&&e.owner_id===CAL_FILTER);
+  return list;
+}
+function eventsOfDay(iso){
+  return calEvents().filter(e=>isoOf(e.starts_at)===iso)
+    .sort((a,b)=>(a.all_day?0:1)-(b.all_day?0:1)||new Date(a.starts_at)-new Date(b.starts_at));
+}
+
+function renderCal(){
+  const now=new Date();
+  if(CAL_Y===null){CAL_Y=now.getFullYear();CAL_M=now.getMonth()}
+  app.innerHTML=`
+  <div class="topbar">
+    <button class="ttl grow secbtn" id="secSwitch">Календарь семьи ${IC.chev}</button>
+    <button class="iconbtn" id="btnTheme" title="Тема">${IC.theme}</button>
+    <button class="iconbtn" id="btnOut" title="Выйти">${IC.logout}</button>
+  </div>
+  <div class="scroll"><div id="calbody"></div></div>
+  <button class="fab" id="fabEv">${IC.plus}</button>`;
+  $('#secSwitch').onclick=openSectionSwitch;
+  $('#btnTheme').onclick=toggleTheme;
+  $('#btnOut').onclick=async()=>{unsubscribeRealtime();await db.logout();STATE=null;ROUTE='login';TABS=null;SECTION='money';render()};
+  $('#fabEv').onclick=()=>openEventEdit(null, CAL_DAY||todayISO());
+  renderCalBody();
+}
+function renderCalBody(){ CAL_VIEW==='day'?renderCalDay():renderCalMonth(); }
+
+function calFilterBar(){
+  const opts=[['all','Все'],...STATE.members.map(m=>[m.id,m.firstName]),['shared','Общие']];
+  return `<div class="opsfilter" id="calfilter">${opts.map(([k,n])=>`<button data-cf="${k}" class="${CAL_FILTER===k?'on':''}">${esc(n)}</button>`).join('')}</div>`;
+}
+function bindCalFilter(){$('#calfilter')?.querySelectorAll('[data-cf]').forEach(b=>b.onclick=()=>{if(CAL_FILTER===b.dataset.cf)return;CAL_FILTER=b.dataset.cf;renderCalBody()})}
+
+function renderCalMonth(){
+  const body=$('#calbody');
+  const first=new Date(CAL_Y,CAL_M,1);
+  const startWd=(first.getDay()+6)%7;
+  const days=new Date(CAL_Y,CAL_M+1,0).getDate();
+  const prevDays=new Date(CAL_Y,CAL_M,0).getDate();
+  const mName=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'}).format(first);
+  const wd=['пн','вт','ср','чт','пт','сб','вс'];
+  const today=todayISO();
+
+  const cells=[];
+  for(let i=startWd-1;i>=0;i--)cells.push({d:prevDays-i,mut:true,iso:null});
+  for(let d=1;d<=days;d++){
+    const iso=new Date(Date.UTC(CAL_Y,CAL_M,d)).toISOString().slice(0,10);
+    cells.push({d,mut:false,iso});
+  }
+  while(cells.length%7!==0)cells.push({d:cells.length%7,mut:true,iso:null});
+
+  let html=`<div class="calwrap fade">
+    <div class="calhead">
+      <button class="dp-nav" id="cPrev">${IC.back}</button>
+      <span class="cmn">${esc(mName)}</span>
+      <button class="dp-nav" id="cNext">${IC.fwd}</button>
+    </div>
+    ${calFilterBar()}
+    <div class="calgrid-wd">${wd.map(w=>`<div class="cwd">${w}</div>`).join('')}</div>
+    <div class="calgrid">`;
+  cells.forEach(c=>{
+    if(c.mut){html+=`<div class="ccell mut"><span class="cnum">${c.d}</span></div>`;return}
+    const evs=eventsOfDay(c.iso);
+    const show=evs.slice(0,3);
+    html+=`<button class="ccell ${c.iso===today?'today':''}" data-day="${c.iso}">
+      <span class="cnum">${c.d}</span>
+      <span class="cevs">${show.map(e=>`<span class="cev" style="background:${evColor(e)}1F;color:${evColor(e)};border-left:3px solid ${ownerColor(e)}">${esc(e.title)}</span>`).join('')}
+      ${evs.length>3?`<span class="cmore">+${evs.length-3}</span>`:''}</span>
+    </button>`;
+  });
+  html+=`</div><div style="height:90px"></div></div>`;
+  body.innerHTML=html;
+  bindCalFilter();
+  $('#cPrev').onclick=()=>{CAL_M--;if(CAL_M<0){CAL_M=11;CAL_Y--}renderCalMonth()};
+  $('#cNext').onclick=()=>{CAL_M++;if(CAL_M>11){CAL_M=0;CAL_Y++}renderCalMonth()};
+  body.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{CAL_DAY=b.dataset.day;CAL_VIEW='day';renderCalBody()});
+}
+
+function renderCalDay(){
+  const body=$('#calbody');
+  const iso=CAL_DAY||todayISO();
+  const d=new Date(iso+'T00:00:00');
+  const title=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long',weekday:'long'}).format(d);
+  const evs=eventsOfDay(iso);
+  const allDay=evs.filter(e=>e.all_day);
+  const timed=evs.filter(e=>!e.all_day);
+
+  let html=`<div class="calwrap fade">
+    <div class="calhead">
+      <button class="dp-nav" id="dBack">${IC.back}</button>
+      <span class="cmn">${esc(title)}</span>
+      <button class="dp-nav" id="dToMonth">${IC.cal2}</button>
+    </div>
+    ${calFilterBar()}`;
+  if(allDay.length){
+    html+=`<div class="allday">${allDay.map(e=>`<button class="adev" data-ev="${e.id}" style="background:${evColor(e)}1F;color:${evColor(e)};border-left:3px solid ${ownerColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;
+  }
+  // часовая шкала
+  html+=`<div class="hours">`;
+  for(let h=0;h<24;h++){
+    html+=`<div class="hrow"><span class="hlbl">${String(h).padStart(2,'0')}:00</span><span class="hline"></span></div>`;
+  }
+  html+=`<div class="hevents">`;
+  const HH=54; // высота часа
+  timed.forEach(e=>{
+    const s=new Date(e.starts_at), en=e.ends_at?new Date(e.ends_at):new Date(s.getTime()+3600000);
+    const top=(s.getHours()+s.getMinutes()/60)*HH;
+    const h=Math.max(28,((en-s)/3600000)*HH-3);
+    html+=`<button class="hev" data-ev="${e.id}" style="top:${top}px;height:${h}px;background:${evColor(e)}26;border-left:4px solid ${evColor(e)};color:var(--text)">
+      <span class="hev-t">${esc(e.title)}</span>
+      <span class="hev-s">${hhmm(e.starts_at)}${e.ends_at?'–'+hhmm(e.ends_at):''}</span>
+    </button>`;
+  });
+  html+=`</div></div><div style="height:90px"></div></div>`;
+  body.innerHTML=html;
+  bindCalFilter();
+  $('#dBack').onclick=()=>{CAL_VIEW='month';renderCalBody()};
+  $('#dToMonth').onclick=()=>{CAL_VIEW='month';renderCalBody()};
+  body.querySelectorAll('[data-ev]').forEach(b=>b.onclick=()=>openEventDetail(b.dataset.ev));
+  // прокрутка к 8 утра
+  const sc=$('.scroll'); if(sc) sc.scrollTop=8*HH;
+}
+
+/* ---------- событие: просмотр ---------- */
+function openEventDetail(id){
+  const e=(STATE.events||[]).find(x=>x.id===id); if(!e)return;
+  const owner=e.scope==='shared'?null:memberById(e.owner_id);
+  const when=e.all_day?'весь день':`${hhmm(e.starts_at)}${e.ends_at?' – '+hhmm(e.ends_at):''}`;
+  openSheet(`<div class="s-title"><span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${evColor(e)};margin-right:8px"></span>${esc(e.title)}</div>
+    <div class="s-choose" style="padding:0 16px">
+      <div class="dd-row"><span class="dd-k">Дата</span><span class="dd-v">${esc(fmtDate(isoOf(e.starts_at)))}</span></div>
+      <div class="dd-row"><span class="dd-k">Время</span><span class="dd-v">${when}</span></div>
+      <div class="dd-row"><span class="dd-k">Кому</span><span class="dd-v"><span class="dd-acc"><span class="d" style="background:${ownerColor(e)}"></span>${e.scope==='shared'?'Общее':esc(owner?.firstName||'—')}</span></span></div>
+      ${e.remind_min?`<div class="dd-row"><span class="dd-k">Напомнить</span><span class="dd-v">за ${e.remind_min} мин</span></div>`:''}
+      ${e.note?`<div class="dd-row" style="display:block"><span class="dd-k">Заметка</span><div style="margin-top:4px">${esc(e.note)}</div></div>`:''}
+    </div>
+    <button class="s-item" data-a="edit">${IC.edit}<span>Редактировать</span></button>
+    <button class="s-item danger" data-a="del">${IC.trash}<span>Удалить</span></button>`);
+  $('#sheet').querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>{
+    const a=b.dataset.a;closeSheet();
+    if(a==='edit')openEventEdit(e);
+    if(a==='del'){
+      const backup={...e};STATE.events=STATE.events.filter(x=>x.id!==id);renderCalBody();toast('Удалено');
+      db.deleteEvent(id).catch(()=>{STATE.events.push(backup);renderCalBody();toast('Не удалось удалить')});
+    }
+  });
+}
+
+/* ---------- событие: создание/редактирование ---------- */
+function openEventEdit(ev, dayIso){
+  const u=me();
+  if(ev){
+    EDRAFT={id:ev.id,title:ev.title,day:isoOf(ev.starts_at),start:ev.all_day?'09:00':hhmm(ev.starts_at),
+      end:ev.ends_at?hhmm(ev.ends_at):'',all_day:!!ev.all_day,scope:ev.scope,owner_id:ev.owner_id,
+      color:ev.color||'',note:ev.note||'',remind_min:ev.remind_min||0};
+  }else{
+    EDRAFT={id:null,title:'',day:dayIso||todayISO(),start:'09:00',end:'10:00',all_day:false,
+      scope:'personal',owner_id:u.id,color:'',note:'',remind_min:0};
+  }
+  drawEventSheet();
+}
+function drawEventSheet(){
+  const d=EDRAFT;
+  const swatches=EVENT_COLORS.map(c=>`<button class="sw" data-ec="${c}" aria-pressed="${d.color===c}" style="background:${c}"></button>`).join('');
+  const reminders=[[0,'нет'],[10,'10 мин'],[30,'30 мин'],[60,'1 час'],[1440,'1 день']];
+  openSheet(`<div class="s-title">${d.id?'Изменить событие':'Новое событие'}</div>
+    <div class="evform">
+      <input class="input" id="evTitle" placeholder="Название" value="${esc(d.title)}">
+      <button class="input evpick" id="evDay">${IC.cal}<span>${esc(fmtDate(d.day))}</span></button>
+      <div class="evrow">
+        <button class="chip ${d.all_day?'on':''}" id="evAllDay">${d.all_day?'Весь день':'Указать время'}</button>
+      </div>
+      ${d.all_day?'':`<div class="evrow">
+        <input class="input" id="evStart" type="time" value="${d.start}">
+        <span class="evdash">–</span>
+        <input class="input" id="evEnd" type="time" value="${d.end}">
+      </div>`}
+      <div class="lbl-min" style="margin:10px 2px 6px">Кому</div>
+      <div class="chips" id="evScope">
+        ${STATE.members.map(m=>`<button class="chip ${d.scope==='personal'&&d.owner_id===m.id?'on':''}" data-sc="${m.id}"><span class="cd" style="background:${cHex(m.color)}"></span>${esc(m.firstName)}</button>`).join('')}
+        <button class="chip ${d.scope==='shared'?'on':''}" data-sc="shared"><span class="cd" style="background:var(--shared)"></span>Общее</button>
+      </div>
+      <div class="lbl-min" style="margin:10px 2px 6px">Цвет</div>
+      <div class="sw-row" style="padding:0 0 8px">
+        <button class="sw" data-ec="" aria-pressed="${!d.color}" style="background:var(--surface-2);border-color:var(--border)"></button>
+        ${swatches}
+      </div>
+      <div class="lbl-min" style="margin:6px 2px 6px">Напомнить</div>
+      <div class="chips" id="evRemind">
+        ${reminders.map(([v,n])=>`<button class="chip ${d.remind_min===v?'on':''}" data-rm="${v}">${n}</button>`).join('')}
+      </div>
+      <textarea class="input" id="evNote" placeholder="Заметка" style="margin-top:10px">${esc(d.note)}</textarea>
+      <button class="btn btn-primary btn-block" id="evSave" style="margin-top:12px">Сохранить</button>
+    </div>`);
+  const t=$('#evTitle'); if(t) t.oninput=e=>d.title=e.target.value;
+  $('#evNote').oninput=e=>d.note=e.target.value;
+  const st=$('#evStart'); if(st) st.onchange=e=>d.start=e.target.value;
+  const en=$('#evEnd'); if(en) en.onchange=e=>d.end=e.target.value;
+  $('#evAllDay').onclick=()=>{d.all_day=!d.all_day;drawEventSheet()};
+  $('#evDay').onclick=()=>openEventDayPicker();
+  $('#sheet').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{
+    const v=b.dataset.sc;
+    if(v==='shared'){d.scope='shared';d.owner_id=null}else{d.scope='personal';d.owner_id=v}
+    $('#sheet').querySelectorAll('[data-sc]').forEach(x=>x.classList.toggle('on',x.dataset.sc===v));
+  });
+  $('#sheet').querySelectorAll('[data-ec]').forEach(b=>b.onclick=()=>{
+    d.color=b.dataset.ec;$('#sheet').querySelectorAll('[data-ec]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.ec===d.color));
+  });
+  $('#sheet').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
+    d.remind_min=+b.dataset.rm;$('#sheet').querySelectorAll('[data-rm]').forEach(x=>x.classList.toggle('on',+x.dataset.rm===d.remind_min));
+  });
+  $('#evSave').onclick=saveEvent;
+}
+function openEventDayPicker(){
+  const cur=new Date(EDRAFT.day+'T00:00:00');
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const draw=(yy,mm)=>{
+    const first=new Date(yy,mm,1),startWd=(first.getDay()+6)%7,days=new Date(yy,mm+1,0).getDate();
+    const mName=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'}).format(first);
+    const wd=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    let cells='';for(let i=0;i<startWd;i++)cells+='<div></div>';
+    for(let dn=1;dn<=days;dn++){const iso=new Date(Date.UTC(yy,mm,dn)).toISOString().slice(0,10);
+      cells+=`<button class="dp-day ${iso===EDRAFT.day?'sel':''} ${iso===todayISO()&&iso!==EDRAFT.day?'today':''}" data-pd="${iso}">${dn}</button>`}
+    openSheet(`<div class="s-title">Дата события</div><div class="dp">
+      <div class="dp-head"><button class="dp-nav" id="pPrev">${IC.back}</button><span class="mn">${mName}</span><button class="dp-nav" id="pNext">${IC.fwd}</button></div>
+      <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div></div>`);
+    $('#pPrev').onclick=()=>{let nm=mm-1,ny=yy;if(nm<0){nm=11;ny--}draw(ny,nm)};
+    $('#pNext').onclick=()=>{let nm=mm+1,ny=yy;if(nm>11){nm=0;ny++}draw(ny,nm)};
+    $('#sheet').querySelectorAll('[data-pd]').forEach(b=>b.onclick=()=>{EDRAFT.day=b.dataset.pd;drawEventSheet()});
+  };
+  draw(y,m);
+}
+async function saveEvent(){
+  const d=EDRAFT;
+  const title=(d.title||'').trim();
+  if(!title){toast('Введите название');return}
+  const mk=(t)=>{const [hh,mm]=(t||'00:00').split(':');const dt=new Date(d.day+'T00:00:00');dt.setHours(+hh,+mm,0,0);return dt.toISOString()};
+  const payload={family_id:STATE.family.id,title,
+    starts_at:d.all_day?new Date(d.day+'T00:00:00').toISOString():mk(d.start),
+    ends_at:d.all_day?null:(d.end?mk(d.end):null),
+    all_day:d.all_day,scope:d.scope,owner_id:d.scope==='shared'?null:d.owner_id,
+    color:d.color||null,note:(d.note||'').trim()||null,remind_min:d.remind_min||null,
+    author_id:STATE.session};
+  closeSheet();
+  try{
+    if(d.id){const row=await db.updateEvent(d.id,payload);const i=STATE.events.findIndex(e=>e.id===d.id);if(i>=0)STATE.events[i]=row}
+    else{const row=await db.insertEvent(payload);STATE.events=STATE.events||[];STATE.events.push(row)}
+    renderCalBody();toast(d.id?'Сохранено':'Событие добавлено');
+  }catch(ex){console.error(ex);toast('Не удалось сохранить')}
 }
 
 /* ---------- SHEET base ---------- */
