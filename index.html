@@ -26,158 +26,196 @@
   --tap:44px;
 }
 /* ============================================================
-   ТЁМНАЯ ТЕМА = GRAIN. Поверхности сотканы из случайного зерна,
-   под ним мягкая приглушённая радуга, края тают.
+   ТЁМНАЯ ТЕМА = GRAIN (перенесена из превью целиком).
+   Поверхности не имеют собственной заливки: цвет даёт цветная
+   подложка (tintbed), материал — плотное случайное зерно,
+   края растворяются маской.
    ============================================================ */
 :root[data-theme="dark"]{
-  --bg:#14121C; --surface:#1E1B28; --surface-2:#272232;
-  --border:#332C42; --border-strong:#443B57;
+  --bg:#14121C;
+  --surface:transparent; --surface-2:rgba(255,255,255,.045);
+  --border:transparent; --border-strong:rgba(255,255,255,.1);
   --text:#F4EDE4; --text-2:#BDB0C0; --text-3:#8D8296;
-  --brand:#5FC9A0; --brand-strong:#7FD8B4; --brand-soft:#5FC9A024; --on-brand:#101A16;
-  --him:#5FC9A0; --him-soft:#5FC9A024;
-  --her:#F2789C; --her-soft:#F2789C24;
-  --shared:#F3B24A; --shared-soft:#F3B24A24;
-  --success:#5FC9A0; --success-soft:#5FC9A024;
-  --danger:#F06C3E; --danger-soft:#F06C3E24;
-  --sky:#4FB4D8; --lilac:#9B7BE0; --lime:#A9CE4F;
-  --sh-1:0 1px 2px rgba(0,0,0,.34); --sh-2:0 6px 18px rgba(0,0,0,.42); --sh-3:0 14px 34px rgba(0,0,0,.52);
-  /* зерно: настоящий случайный шум, без муара */
+  --brand:#5FC9A0; --brand-strong:#7FD8B4; --brand-soft:rgba(95,201,160,.16); --on-brand:#101A16;
+  --him:#5FC9A0; --him-soft:rgba(95,201,160,.16);
+  --her:#F2789C; --her-soft:rgba(242,120,156,.16);
+  --shared:#F3B24A; --shared-soft:rgba(243,178,74,.16);
+  --success:#5FC9A0; --success-soft:rgba(95,201,160,.16);
+  --danger:#F06C3E; --danger-soft:rgba(240,108,62,.16);
+  --sun:#F06C3E; --sky:#4FB4D8; --lilac:#9B7BE0; --lime:#A9CE4F;
+  --sh-1:0 1px 2px rgba(0,0,0,.3); --sh-2:0 6px 18px rgba(0,0,0,.4); --sh-3:0 14px 34px rgba(0,0,0,.5);
   --noise:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='discrete' tableValues='0 0 0 0 .35 .6 .85 1'/></feComponentTransfer></filter><rect width='260' height='260' filter='url(%23g)'/></svg>");
   --melt:radial-gradient(125% 135% at 50% 44%, #000 22%, rgba(0,0,0,.85) 42%, rgba(0,0,0,.5) 60%, rgba(0,0,0,.22) 76%, transparent 96%);
+  --tint:radial-gradient(42% 46% at 18% 26%, var(--him), transparent 72%),
+         radial-gradient(40% 44% at 54% 12%, var(--sky), transparent 70%),
+         radial-gradient(44% 48% at 84% 34%, var(--her), transparent 72%),
+         radial-gradient(46% 50% at 28% 84%, var(--shared), transparent 74%),
+         radial-gradient(42% 46% at 76% 88%, var(--lilac), transparent 72%);
+  --tint-melt:radial-gradient(120% 130% at 50% 44%, #000 18%, rgba(0,0,0,.7) 46%, rgba(0,0,0,.32) 68%, transparent 94%);
 }
-/* фоновое зерно всей сцены — слабое, чтобы не рябило на пустых экранах */
+/* фоновое зерно сцены */
 :root[data-theme="dark"] body::before{
-  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
-  background-image:var(--noise);background-size:200px 200px;
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.1;
+  background-image:var(--noise);background-size:130px 130px;
 }
-/* мягкая радуга за интерфейсом */
+/* радужный амбиент за интерфейсом — как в превью */
 :root[data-theme="dark"] #phone::before{
   content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
-  filter:blur(20px) saturate(.7);opacity:.15;
+  filter:blur(18px) saturate(.7);opacity:.16;
   background:
-    radial-gradient(52% 24% at 16% 3%,  var(--him), transparent 70%),
-    radial-gradient(48% 22% at 76% 11%, var(--her), transparent 70%),
-    radial-gradient(50% 22% at 44% 48%, var(--sky), transparent 72%),
-    radial-gradient(54% 24% at 24% 82%, var(--shared), transparent 72%),
-    radial-gradient(50% 22% at 82% 95%, var(--lilac), transparent 72%);
+    radial-gradient(52% 26% at 18% 4%,  var(--him), transparent 70%),
+    radial-gradient(48% 24% at 74% 12%, var(--her), transparent 70%),
+    radial-gradient(50% 24% at 46% 52%, var(--sky), transparent 72%),
+    radial-gradient(54% 26% at 26% 88%, var(--shared), transparent 72%),
+    radial-gradient(50% 24% at 82% 96%, var(--lilac), transparent 72%);
   -webkit-mask-image:radial-gradient(100% 100% at 50% 50%, #000 40%, rgba(0,0,0,.4) 74%, transparent 99%);
           mask-image:radial-gradient(100% 100% at 50% 50%, #000 40%, rgba(0,0,0,.4) 74%, transparent 99%);
 }
 :root[data-theme="dark"] #phone>#app{position:relative;z-index:1}
-/* поверхности: тело из зерна, край растворён, без жёстких рамок */
+
+/* ---- МАТЕРИАЛ: ::before = цвет (tintbed), ::after = зерно ---- */
 :root[data-theme="dark"] .card,
 :root[data-theme="dark"] .limitcard,
 :root[data-theme="dark"] .sheet,
-:root[data-theme="dark"] .acard{border-color:transparent;position:relative;isolation:isolate}
-/* мелкие интерактивные поверхности — тоже из зерна */
 :root[data-theme="dark"] .chip,
 :root[data-theme="dark"] .period button,
 :root[data-theme="dark"] .opsfilter button,
 :root[data-theme="dark"] .seg,
 :root[data-theme="dark"] .htabs,
+:root[data-theme="dark"] .htabs button,
+:root[data-theme="dark"] .seg button,
 :root[data-theme="dark"] .key,
 :root[data-theme="dark"] .tpi,
 :root[data-theme="dark"] .di-del,
 :root[data-theme="dark"] .lc-bar,
 :root[data-theme="dark"] .iconbtn,
-:root[data-theme="dark"] .dp-day,
 :root[data-theme="dark"] .btn-ghost,
-:root[data-theme="dark"] .s-opt,
-:root[data-theme="dark"] .ordbtn{position:relative;isolation:isolate;border-color:transparent}
+:root[data-theme="dark"] .ordbtn,
+:root[data-theme="dark"] .tx-ic,
+:root[data-theme="dark"] .limitcard,
+:root[data-theme="dark"] .fab{position:relative;isolation:isolate;border-color:transparent;background-color:transparent}
+
+:root[data-theme="dark"] .card::before,
+:root[data-theme="dark"] .limitcard::before,
+:root[data-theme="dark"] .sheet::before,
+:root[data-theme="dark"] .chip::before,
+:root[data-theme="dark"] .period button::before,
+:root[data-theme="dark"] .opsfilter button::before,
+:root[data-theme="dark"] .seg::before,
+:root[data-theme="dark"] .htabs::before,
+:root[data-theme="dark"] .key::before,
+:root[data-theme="dark"] .tpi::before,
+:root[data-theme="dark"] .di-del::before,
+:root[data-theme="dark"] .lc-bar::before,
+:root[data-theme="dark"] .iconbtn::before,
+:root[data-theme="dark"] .btn-ghost::before,
+:root[data-theme="dark"] .ordbtn::before,
+:root[data-theme="dark"] .tx-ic::before{
+  content:"";position:absolute;inset:0;z-index:-2;border-radius:inherit;pointer-events:none;
+  background:var(--tint);
+  -webkit-mask-image:var(--tint-melt); mask-image:var(--tint-melt);
+  filter:saturate(.75) blur(9px);opacity:.3;
+}
+:root[data-theme="dark"] .card::after,
+:root[data-theme="dark"] .limitcard::after,
+:root[data-theme="dark"] .sheet::after,
 :root[data-theme="dark"] .chip::after,
 :root[data-theme="dark"] .period button::after,
 :root[data-theme="dark"] .opsfilter button::after,
 :root[data-theme="dark"] .seg::after,
 :root[data-theme="dark"] .htabs::after,
+:root[data-theme="dark"] .key::after,
 :root[data-theme="dark"] .tpi::after,
 :root[data-theme="dark"] .di-del::after,
 :root[data-theme="dark"] .lc-bar::after,
 :root[data-theme="dark"] .iconbtn::after,
 :root[data-theme="dark"] .btn-ghost::after,
-:root[data-theme="dark"] .ordbtn::after{
-  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
-  background-image:var(--noise);background-size:110px 110px;
-  -webkit-mask-image:var(--melt); mask-image:var(--melt);
-  opacity:.13;mix-blend-mode:screen;
-}
-:root[data-theme="dark"] .chip.on::after,
-:root[data-theme="dark"] .period button.on::after,
-:root[data-theme="dark"] .opsfilter button.on::after{opacity:.26}
-:root[data-theme="dark"] .card::after,
-:root[data-theme="dark"] .limitcard::after,
-:root[data-theme="dark"] .acard::after,
-:root[data-theme="dark"] .sheet::after,
-:root[data-theme="dark"] .chip.on::after,
-:root[data-theme="dark"] .htabs button.on::after,
-:root[data-theme="dark"] .seg button.on::after,
-:root[data-theme="dark"] .tx-ic::after,
-:root[data-theme="dark"] .key::after,
-:root[data-theme="dark"] .fab::after{
+:root[data-theme="dark"] .ordbtn::after,
+:root[data-theme="dark"] .tx-ic::after{
   content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
   background-image:var(--noise);background-size:150px 150px;
   -webkit-mask-image:var(--melt); mask-image:var(--melt);
-  opacity:.17;mix-blend-mode:screen;
+  opacity:.2;
 }
-:root[data-theme="dark"] .tx-ic::after{opacity:.3;background-size:90px 90px}
-:root[data-theme="dark"] .acard::after{opacity:.22}
-:root[data-theme="dark"] .fab::after{opacity:.26;border-radius:50%}
-:root[data-theme="dark"] .key::after{opacity:.12}
-:root[data-theme="dark"] .chip.on,
+/* маркеры категорий — ярче, как в превью */
+:root[data-theme="dark"] .tx-ic::before{opacity:.5;filter:saturate(.8) blur(6px)}
+:root[data-theme="dark"] .tx-ic::after{opacity:.34;background-size:90px 90px}
+/* активные состояния — насыщеннее */
+:root[data-theme="dark"] .chip.on::before,
+:root[data-theme="dark"] .period button.on::before,
+:root[data-theme="dark"] .opsfilter button.on::before,
+:root[data-theme="dark"] .htabs button.on::before,
+:root[data-theme="dark"] .seg button.on::before{
+  content:"";position:absolute;inset:0;z-index:-2;border-radius:inherit;pointer-events:none;
+  background:var(--tint);-webkit-mask-image:var(--tint-melt);mask-image:var(--tint-melt);
+  filter:saturate(.8) blur(7px);opacity:.42;
+}
+:root[data-theme="dark"] .chip.on::after,
+:root[data-theme="dark"] .period button.on::after,
+:root[data-theme="dark"] .opsfilter button.on::after,
+:root[data-theme="dark"] .htabs button.on::after,
+:root[data-theme="dark"] .seg button.on::after{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background-image:var(--noise);background-size:120px 120px;
+  -webkit-mask-image:var(--melt);mask-image:var(--melt);opacity:.28;
+}
 :root[data-theme="dark"] .htabs button.on,
-:root[data-theme="dark"] .seg button.on{position:relative;isolation:isolate}
-/* карточка счёта: полупрозрачная, чтобы зерно и радуга просвечивали */
-:root[data-theme="dark"] .acard{box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.07)}
-/* экран ввода и календарь — свои поверхности */
-:root[data-theme="dark"] #entry{background:var(--bg)}
-:root[data-theme="dark"] .keypad{background:transparent;border-top-color:transparent;position:relative;isolation:isolate}
-:root[data-theme="dark"] .keypad::after{
-  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
-  background-image:var(--noise);background-size:170px 170px;
-  -webkit-mask-image:linear-gradient(180deg, transparent, #000 22%, #000 100%);
-          mask-image:linear-gradient(180deg, transparent, #000 22%, #000 100%);
-  opacity:.1;mix-blend-mode:screen;
+:root[data-theme="dark"] .seg button.on{background:transparent;box-shadow:none}
+/* карточки счетов: цвет владельца + зерно + радужный подмес */
+:root[data-theme="dark"] .acard{position:relative;isolation:isolate}
+:root[data-theme="dark"] .acard::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  filter:blur(12px) saturate(.7);
+  background:
+    radial-gradient(44% 52% at 16% 20%, var(--sky), transparent 72%),
+    radial-gradient(46% 54% at 84% 30%, var(--lilac), transparent 72%),
+    radial-gradient(48% 56% at 40% 92%, var(--her), transparent 74%);
 }
+:root[data-theme="dark"] .acard::after{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  background-image:var(--noise);background-size:150px 150px;
+  -webkit-mask-image:var(--melt);mask-image:var(--melt);opacity:.24;
+}
+:root[data-theme="dark"] .acard>*{position:relative;z-index:1}
+/* кнопка «плюс»: радужный перелив, зерно, пыль, ореол */
+:root[data-theme="dark"] .fab{background:none;color:#1A1220}
+:root[data-theme="dark"] .fab::before{
+  content:"";position:absolute;inset:0;z-index:-2;border-radius:50%;pointer-events:none;
+  background:conic-gradient(from 200deg, var(--him), var(--sky), var(--lilac), var(--her), var(--sun), var(--shared), var(--lime), var(--him));
+  filter:saturate(.78);
+  -webkit-mask-image:radial-gradient(50% 50% at 50% 50%, #000 52%, rgba(0,0,0,.5) 74%, rgba(0,0,0,.18) 88%, transparent 100%);
+          mask-image:radial-gradient(50% 50% at 50% 50%, #000 52%, rgba(0,0,0,.5) 74%, rgba(0,0,0,.18) 88%, transparent 100%);
+}
+:root[data-theme="dark"] .fab::after{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:50%;pointer-events:none;
+  background-image:var(--noise);background-size:100px 100px;opacity:.3;mix-blend-mode:overlay;
+}
+/* поля ввода: зерно фоном (у input псевдоэлементы не работают) */
 :root[data-theme="dark"] .input{
-  border-color:rgba(255,255,255,.09);
-  background-color:var(--surface);
-  background-image:var(--noise);
-  background-size:110px 110px;
-  background-blend-mode:screen;
+  background-color:rgba(255,255,255,.05);background-image:var(--noise);
+  background-size:110px 110px;background-blend-mode:screen;border-color:rgba(255,255,255,.09);
 }
 :root[data-theme="dark"] .input:focus{border-color:var(--brand)}
-:root[data-theme="dark"] .ccell{border-bottom-color:transparent}
-:root[data-theme="dark"] .calgrid-wd{border-bottom-color:transparent}
-:root[data-theme="dark"] .ccell.wknd{background:rgba(255,255,255,.028)}
-/* полоса лимита: заполнение тоже зернистое */
-:root[data-theme="dark"] .lc-bar i{position:relative}
-:root[data-theme="dark"] .lc-bar i::after{
-  content:"";position:absolute;inset:0;pointer-events:none;
-  background-image:var(--noise);background-size:80px 80px;opacity:.2;mix-blend-mode:overlay;
-}
-/* разделители — не линии, а тающий след */
+/* разделители — тающий след из частиц, не линии */
 :root[data-theme="dark"] .row+.row,
 :root[data-theme="dark"] .txrow+.txrow,
 :root[data-theme="dark"] .dd-row+.dd-row{border-top-color:transparent;position:relative}
 :root[data-theme="dark"] .row+.row::before,
 :root[data-theme="dark"] .txrow+.txrow::before,
 :root[data-theme="dark"] .dd-row+.dd-row::before{
-  content:"";position:absolute;left:14px;right:14px;top:0;height:1.5px;pointer-events:none;
+  content:"";position:absolute;left:14px;right:14px;top:0;height:2px;pointer-events:none;
   background-image:var(--noise);background-size:120px 6px;opacity:.3;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
-          mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 24%,#000 76%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 24%,#000 76%,transparent);
 }
-/* карточки счетов: радужный подмес поверх цвета владельца */
-:root[data-theme="dark"] .acard::before{
-  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
-  filter:blur(14px) saturate(.65);
-  background:
-    radial-gradient(44% 52% at 16% 20%, var(--sky), transparent 72%),
-    radial-gradient(46% 54% at 84% 30%, var(--her), transparent 72%),
-    radial-gradient(48% 56% at 40% 92%, var(--lilac), transparent 74%);
-  -webkit-mask-image:radial-gradient(120% 130% at 50% 44%, #000 20%, rgba(0,0,0,.55) 52%, transparent 92%);
-          mask-image:radial-gradient(120% 130% at 50% 44%, #000 20%, rgba(0,0,0,.55) 52%, transparent 92%);
-}
-:root[data-theme="dark"] .acard>*{position:relative;z-index:1}
+/* экраны и прочие поверхности */
+:root[data-theme="dark"] #entry{background:var(--bg)}
+:root[data-theme="dark"] .keypad{background:transparent;border-top-color:transparent}
+:root[data-theme="dark"] .ccell,
+:root[data-theme="dark"] .calgrid-wd{border-bottom-color:transparent}
+:root[data-theme="dark"] .ccell.wknd{background:rgba(255,255,255,.03)}
+:root[data-theme="dark"] .lc-bar i{position:relative;z-index:1}
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :focus{outline:none}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
