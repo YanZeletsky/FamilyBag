@@ -103,10 +103,10 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 /* ---------- FEED ---------- */
 .pad{padding:0 16px 8px}
 #homebody{padding-bottom:104px}
-.month-div{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--text-3);text-transform:capitalize;margin:20px 6px 4px}
-.weekgroup{margin-top:12px}
-.weekhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 8px}
-.weekhead .w{font-weight:600;font-size:13px;color:var(--text-2)}
+.month-div{font-family:'Nunito';font-weight:800;font-size:17px;color:var(--text);text-transform:capitalize;margin:22px 6px 2px}
+.weekgroup{margin-top:14px}
+.weekhead{display:flex;justify-content:space-between;align-items:baseline;padding:0 6px 6px}
+.weekhead .w{font-weight:700;font-size:12.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.03em}
 .weekhead .t{font-family:'Nunito';font-weight:700;font-size:13px;color:var(--text-3)}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1)}
 .txrow{display:flex;align-items:center;gap:12px;padding:12px 14px;width:100%;text-align:left;background:none}
@@ -237,20 +237,25 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .legend .pc{font-size:12.5px;color:var(--text-3);width:42px;text-align:right}
 .legend .am{font-family:'Nunito';font-weight:700;font-size:14px;width:96px;text-align:right}
 .catlist{margin-top:2px}
+.statwrap{padding:0 16px}
+.statwrap .period{padding-left:0;padding-right:0}
+.statwrap .sec-lbl{margin-left:2px;margin-right:2px}
+.statwrap .spent{padding-left:0;padding-right:0}
 .catitem + .catitem{border-top:1px solid var(--border)}
-.catrow{display:flex;align-items:center;gap:10px;padding:12px 4px;width:100%;text-align:left;background:none}
+.catrow{display:flex;align-items:center;gap:8px;padding:12px 2px;width:100%;text-align:left;background:none}
 .catrow:active{background:var(--surface-2)}
 .catrow .sw{width:12px;height:12px;border-radius:4px;flex:none}
-.catrow .nm{flex:1;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.catrow .pc{font-size:12.5px;color:var(--text-3);width:40px;text-align:right;flex:none}
-.catrow .am{font-family:'Nunito';font-weight:700;font-size:14px;width:104px;text-align:right;flex:none}
-.catrow .chev{width:18px;color:var(--text-3);transition:transform .2s;flex:none;display:grid;place-items:center}
+.catrow .nm{flex:1;font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.catrow .pc{font-size:12.5px;color:var(--text-3);width:36px;text-align:right;flex:none}
+.catrow .am{font-family:'Nunito';font-weight:700;font-size:14px;text-align:right;flex:none;white-space:nowrap}
+.catrow .chev{width:16px;color:var(--text-3);transition:transform .2s;flex:none;display:grid;place-items:center}
 .catitem.open .catrow .chev{transform:rotate(180deg)}
-.sublist{counter-reset:sub;display:none;padding:0 4px 8px 30px}
+.sublist{counter-reset:sub;display:none;padding:0 18px 8px 24px}
 .catitem.open .sublist{display:block}
 .subrow{display:flex;justify-content:space-between;gap:10px;padding:5px 0;font-size:13px;color:var(--text-2);counter-increment:sub}
+.subrow .sname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .subrow .sname::before{content:counter(sub)". ";color:var(--text-3);font-weight:600}
-.subrow .samt{font-family:'Nunito';font-weight:700;white-space:nowrap;color:var(--text)}
+.subrow .samt{font-family:'Nunito';font-weight:700;white-space:nowrap;color:var(--text);flex:none}
 .whobox{padding:6px 16px 0}
 .whorow{margin-bottom:14px}
 .whorow .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
@@ -264,15 +269,15 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .opsfilter{display:flex;gap:6px;padding:12px 2px 2px}
 .opsfilter button{flex:1;min-height:36px;border-radius:var(--r-pill);border:1.5px solid var(--border);background:var(--surface);font-weight:600;font-size:13.5px;color:var(--text-2);transition:all .13s}
 .opsfilter button.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand-strong)}
-/* дни внутри недели */
-.dayblock{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
-.daychip{flex:none;width:52px;border-radius:var(--r-md);background:var(--surface-2);border:1px solid var(--border);padding:8px 4px;text-align:center;position:sticky;top:6px}
-.daychip.today{background:var(--brand-soft);border-color:var(--brand)}
-.daychip .dnum{display:block;font-family:'Nunito';font-weight:800;font-size:18px;line-height:1;color:var(--text)}
-.daychip.today .dnum{color:var(--brand-strong)}
-.daychip .dwd{display:block;font-size:10.5px;color:var(--text-3);font-weight:600;margin-top:2px;text-transform:lowercase}
-.daychip.today .dwd{color:var(--brand-strong)}
-.daycard{flex:1;min-width:0}
+/* дни внутри недели — шапка сверху, операции строками */
+.dayblock{margin-bottom:12px}
+.dayhead2{display:flex;align-items:baseline;gap:6px;padding:4px 8px 6px}
+.dayhead2 .dnum{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--text-2);line-height:1}
+.dayhead2 .dmon{font-size:12px;color:var(--text-3);font-weight:600}
+.dayhead2 .dwd{font-size:11.5px;color:var(--text-3);font-weight:500;text-transform:lowercase}
+.dayhead2.today .dnum{color:var(--brand-strong)}
+.dayhead2.today .dwd{color:var(--brand-strong);font-weight:700}
+.daycard{min-width:0}
 /* контекстная строка */
 .ctxline{font-size:12.5px;color:var(--text-3);font-weight:600;padding:8px 4px 2px}
 .ctxline b{color:var(--text-2)}
@@ -649,14 +654,19 @@ function renderFeed(){
     const ml=monthLabel(mon);if(ml!==lastMonth){html+=`<div class="month-div">${ml}</div>`;lastMonth=ml}
     const list=weeks[mon];const exp=list.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
     html+=`<div class="weekgroup"><div class="weekhead"><span class="w">${weekLabel(mon)}</span>${exp>0?`<span class="t">расход ${fmt(exp)} ₽</span>`:''}</div>`;
-    // внутри недели — группировка по дням с чипом даты сбоку
+    // внутри недели — дни: шапка сверху, операции строками под ней
     const days={};list.forEach(t=>{(days[t.occurred_on]=days[t.occurred_on]||[]).push(t)});
     Object.keys(days).sort((a,b)=>b.localeCompare(a)).forEach(d=>{
       const dd=new Date(d+'T00:00:00');
-      const wdName=['вс','пн','вт','ср','чт','пт','сб'][dd.getDay()];
+      const wdFull=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][dd.getDay()];
       const isToday=d===todayISO();
+      const mName=new Intl.DateTimeFormat('ru-RU',{month:'short'}).format(dd).replace('.','');
       html+=`<div class="dayblock">
-        <div class="daychip ${isToday?'today':''}"><span class="dnum">${dd.getDate()}</span><span class="dwd">${isToday?'сегодня':wdName}</span></div>
+        <div class="dayhead2 ${isToday?'today':''}">
+          <span class="dnum">${dd.getDate()}</span>
+          <span class="dmon">${esc(mName)}</span>
+          <span class="dwd">${isToday?'сегодня':wdFull}</span>
+        </div>
         <div class="card daycard">`;
       days[d].forEach(t=>{
         const cat=catById(t.category_id),acc=accById(t.account_id),author=memberById(t.author_id);
@@ -775,7 +785,7 @@ function renderStats(){
   const big=fmt0(expSum);
   const bigCls=big.length>9?'xs':(big.length>7?'sm':'');
 
-  let html=`<div class="fade">
+  let html=`<div class="fade statwrap">
     <div class="period" id="period">${periods.map(([k,n])=>`<button data-p="${k}" class="${PERIOD===k?'on':''}">${n}</button>`).join('')}</div>
     <div class="ctxline" style="text-align:center">${esc(acc?.name||'')} · ${esc(label)}</div>
     <div class="spent">
