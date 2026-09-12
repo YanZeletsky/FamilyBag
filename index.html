@@ -25,18 +25,96 @@
   --sh-3:0 12px 28px rgba(28,36,48,.10), 0 4px 8px rgba(28,36,48,.05);
   --tap:44px;
 }
+/* ============================================================
+   ТЁМНАЯ ТЕМА = GRAIN. Поверхности сотканы из случайного зерна,
+   под ним мягкая приглушённая радуга, края тают.
+   ============================================================ */
 :root[data-theme="dark"]{
-  --bg:#12161C; --surface:#1A2029; --surface-2:#222A34;
-  --border:#2C3540; --border-strong:#3A4551;
-  --text:#EAEEF3; --text-2:#AEB7C2; --text-3:#7C8695;
-  --brand:#4E9E76; --brand-strong:#3F8763; --brand-soft:#4E9E7624; --on-brand:#06231A;
-  --him:#4E9E76; --him-soft:#4E9E7624;
-  --her:#6FC0EC; --her-soft:#6FC0EC24;
-  --shared:#E6B45C; --shared-soft:#E6B45C24;
-  --success:#3CBF86; --success-soft:#3CBF8624;
-  --danger:#F0656A; --danger-soft:#F0656A24;
-  --sh-1:0 1px 2px rgba(0,0,0,.3); --sh-2:0 4px 12px rgba(0,0,0,.35); --sh-3:0 12px 28px rgba(0,0,0,.45);
+  --bg:#14121C; --surface:#1E1B28; --surface-2:#272232;
+  --border:#332C42; --border-strong:#443B57;
+  --text:#F4EDE4; --text-2:#BDB0C0; --text-3:#8D8296;
+  --brand:#5FC9A0; --brand-strong:#7FD8B4; --brand-soft:#5FC9A024; --on-brand:#101A16;
+  --him:#5FC9A0; --him-soft:#5FC9A024;
+  --her:#F2789C; --her-soft:#F2789C24;
+  --shared:#F3B24A; --shared-soft:#F3B24A24;
+  --success:#5FC9A0; --success-soft:#5FC9A024;
+  --danger:#F06C3E; --danger-soft:#F06C3E24;
+  --sky:#4FB4D8; --lilac:#9B7BE0; --lime:#A9CE4F;
+  --sh-1:0 1px 2px rgba(0,0,0,.34); --sh-2:0 6px 18px rgba(0,0,0,.42); --sh-3:0 14px 34px rgba(0,0,0,.52);
+  /* зерно: настоящий случайный шум, без муара */
+  --noise:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='discrete' tableValues='0 0 0 0 .35 .6 .85 1'/></feComponentTransfer></filter><rect width='260' height='260' filter='url(%23g)'/></svg>");
+  --melt:radial-gradient(125% 135% at 50% 44%, #000 22%, rgba(0,0,0,.85) 42%, rgba(0,0,0,.5) 60%, rgba(0,0,0,.22) 76%, transparent 96%);
 }
+/* фоновое зерно всей сцены */
+:root[data-theme="dark"] body::before{
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.10;
+  background-image:var(--noise);background-size:130px 130px;
+}
+/* мягкая радуга за интерфейсом */
+:root[data-theme="dark"] #phone::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;
+  filter:blur(20px) saturate(.7);opacity:.15;
+  background:
+    radial-gradient(52% 24% at 16% 3%,  var(--him), transparent 70%),
+    radial-gradient(48% 22% at 76% 11%, var(--her), transparent 70%),
+    radial-gradient(50% 22% at 44% 48%, var(--sky), transparent 72%),
+    radial-gradient(54% 24% at 24% 82%, var(--shared), transparent 72%),
+    radial-gradient(50% 22% at 82% 95%, var(--lilac), transparent 72%);
+  -webkit-mask-image:radial-gradient(100% 100% at 50% 50%, #000 40%, rgba(0,0,0,.4) 74%, transparent 99%);
+          mask-image:radial-gradient(100% 100% at 50% 50%, #000 40%, rgba(0,0,0,.4) 74%, transparent 99%);
+}
+:root[data-theme="dark"] #phone>#app{position:relative;z-index:1}
+/* поверхности: тело из зерна, край растворён, без жёстких рамок */
+:root[data-theme="dark"] .card,
+:root[data-theme="dark"] .limitcard,
+:root[data-theme="dark"] .sheet,
+:root[data-theme="dark"] .acard{border-color:transparent;position:relative;isolation:isolate}
+:root[data-theme="dark"] .card::after,
+:root[data-theme="dark"] .limitcard::after,
+:root[data-theme="dark"] .acard::after,
+:root[data-theme="dark"] .sheet::after,
+:root[data-theme="dark"] .chip.on::after,
+:root[data-theme="dark"] .htabs button.on::after,
+:root[data-theme="dark"] .seg button.on::after,
+:root[data-theme="dark"] .tx-ic::after,
+:root[data-theme="dark"] .key::after,
+:root[data-theme="dark"] .fab::after{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background-image:var(--noise);background-size:150px 150px;
+  -webkit-mask-image:var(--melt); mask-image:var(--melt);
+  opacity:.17;mix-blend-mode:screen;
+}
+:root[data-theme="dark"] .tx-ic::after{opacity:.3;background-size:90px 90px}
+:root[data-theme="dark"] .acard::after{opacity:.22}
+:root[data-theme="dark"] .fab::after{opacity:.26;border-radius:50%}
+:root[data-theme="dark"] .key::after{opacity:.12}
+:root[data-theme="dark"] .chip.on,
+:root[data-theme="dark"] .htabs button.on,
+:root[data-theme="dark"] .seg button.on{position:relative;isolation:isolate}
+/* разделители — не линии, а тающий след */
+:root[data-theme="dark"] .row+.row,
+:root[data-theme="dark"] .txrow+.txrow,
+:root[data-theme="dark"] .dd-row+.dd-row{border-top-color:transparent;position:relative}
+:root[data-theme="dark"] .row+.row::before,
+:root[data-theme="dark"] .txrow+.txrow::before,
+:root[data-theme="dark"] .dd-row+.dd-row::before{
+  content:"";position:absolute;left:14px;right:14px;top:0;height:1.5px;pointer-events:none;
+  background-image:var(--noise);background-size:120px 6px;opacity:.3;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
+          mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);
+}
+/* карточки счетов: радужный подмес поверх цвета владельца */
+:root[data-theme="dark"] .acard::before{
+  content:"";position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.5;
+  filter:blur(14px) saturate(.65);
+  background:
+    radial-gradient(44% 52% at 16% 20%, var(--sky), transparent 72%),
+    radial-gradient(46% 54% at 84% 30%, var(--her), transparent 72%),
+    radial-gradient(48% 56% at 40% 92%, var(--lilac), transparent 74%);
+  -webkit-mask-image:radial-gradient(120% 130% at 50% 44%, #000 20%, rgba(0,0,0,.55) 52%, transparent 92%);
+          mask-image:radial-gradient(120% 130% at 50% 44%, #000 20%, rgba(0,0,0,.55) 52%, transparent 92%);
+}
+:root[data-theme="dark"] .acard>*{position:relative;z-index:1}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :focus{outline:none}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
