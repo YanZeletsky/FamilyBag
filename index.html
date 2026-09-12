@@ -45,10 +45,10 @@
   --noise:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='g'><feTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='4' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='discrete' tableValues='0 0 0 0 .35 .6 .85 1'/></feComponentTransfer></filter><rect width='260' height='260' filter='url(%23g)'/></svg>");
   --melt:radial-gradient(125% 135% at 50% 44%, #000 22%, rgba(0,0,0,.85) 42%, rgba(0,0,0,.5) 60%, rgba(0,0,0,.22) 76%, transparent 96%);
 }
-/* фоновое зерно всей сцены */
+/* фоновое зерно всей сцены — слабое, чтобы не рябило на пустых экранах */
 :root[data-theme="dark"] body::before{
-  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.10;
-  background-image:var(--noise);background-size:130px 130px;
+  content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+  background-image:var(--noise);background-size:200px 200px;
 }
 /* мягкая радуга за интерфейсом */
 :root[data-theme="dark"] #phone::before{
@@ -69,6 +69,40 @@
 :root[data-theme="dark"] .limitcard,
 :root[data-theme="dark"] .sheet,
 :root[data-theme="dark"] .acard{border-color:transparent;position:relative;isolation:isolate}
+/* мелкие интерактивные поверхности — тоже из зерна */
+:root[data-theme="dark"] .chip,
+:root[data-theme="dark"] .period button,
+:root[data-theme="dark"] .opsfilter button,
+:root[data-theme="dark"] .seg,
+:root[data-theme="dark"] .htabs,
+:root[data-theme="dark"] .key,
+:root[data-theme="dark"] .tpi,
+:root[data-theme="dark"] .di-del,
+:root[data-theme="dark"] .lc-bar,
+:root[data-theme="dark"] .iconbtn,
+:root[data-theme="dark"] .dp-day,
+:root[data-theme="dark"] .btn-ghost,
+:root[data-theme="dark"] .s-opt,
+:root[data-theme="dark"] .ordbtn{position:relative;isolation:isolate;border-color:transparent}
+:root[data-theme="dark"] .chip::after,
+:root[data-theme="dark"] .period button::after,
+:root[data-theme="dark"] .opsfilter button::after,
+:root[data-theme="dark"] .seg::after,
+:root[data-theme="dark"] .htabs::after,
+:root[data-theme="dark"] .tpi::after,
+:root[data-theme="dark"] .di-del::after,
+:root[data-theme="dark"] .lc-bar::after,
+:root[data-theme="dark"] .iconbtn::after,
+:root[data-theme="dark"] .btn-ghost::after,
+:root[data-theme="dark"] .ordbtn::after{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background-image:var(--noise);background-size:110px 110px;
+  -webkit-mask-image:var(--melt); mask-image:var(--melt);
+  opacity:.13;mix-blend-mode:screen;
+}
+:root[data-theme="dark"] .chip.on::after,
+:root[data-theme="dark"] .period button.on::after,
+:root[data-theme="dark"] .opsfilter button.on::after{opacity:.26}
 :root[data-theme="dark"] .card::after,
 :root[data-theme="dark"] .limitcard::after,
 :root[data-theme="dark"] .acard::after,
@@ -91,6 +125,35 @@
 :root[data-theme="dark"] .chip.on,
 :root[data-theme="dark"] .htabs button.on,
 :root[data-theme="dark"] .seg button.on{position:relative;isolation:isolate}
+/* карточка счёта: полупрозрачная, чтобы зерно и радуга просвечивали */
+:root[data-theme="dark"] .acard{box-shadow:var(--sh-2), inset 0 1px 0 rgba(255,255,255,.07)}
+/* экран ввода и календарь — свои поверхности */
+:root[data-theme="dark"] #entry{background:var(--bg)}
+:root[data-theme="dark"] .keypad{background:transparent;border-top-color:transparent;position:relative;isolation:isolate}
+:root[data-theme="dark"] .keypad::after{
+  content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;
+  background-image:var(--noise);background-size:170px 170px;
+  -webkit-mask-image:linear-gradient(180deg, transparent, #000 22%, #000 100%);
+          mask-image:linear-gradient(180deg, transparent, #000 22%, #000 100%);
+  opacity:.1;mix-blend-mode:screen;
+}
+:root[data-theme="dark"] .input{
+  border-color:rgba(255,255,255,.09);
+  background-color:var(--surface);
+  background-image:var(--noise);
+  background-size:110px 110px;
+  background-blend-mode:screen;
+}
+:root[data-theme="dark"] .input:focus{border-color:var(--brand)}
+:root[data-theme="dark"] .ccell{border-bottom-color:transparent}
+:root[data-theme="dark"] .calgrid-wd{border-bottom-color:transparent}
+:root[data-theme="dark"] .ccell.wknd{background:rgba(255,255,255,.028)}
+/* полоса лимита: заполнение тоже зернистое */
+:root[data-theme="dark"] .lc-bar i{position:relative}
+:root[data-theme="dark"] .lc-bar i::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:var(--noise);background-size:80px 80px;opacity:.2;mix-blend-mode:overlay;
+}
 /* разделители — не линии, а тающий след */
 :root[data-theme="dark"] .row+.row,
 :root[data-theme="dark"] .txrow+.txrow,
