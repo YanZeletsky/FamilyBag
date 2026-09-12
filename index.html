@@ -208,18 +208,37 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .calwrap{padding:0 12px}
 .calhead{display:flex;align-items:center;justify-content:space-between;padding:10px 2px 6px}
 .calhead .cmn{font-family:'Nunito';font-weight:800;font-size:17px;text-transform:capitalize}
-.calgrid-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-top:8px}
-.cwd{text-align:center;font-size:11px;font-weight:700;color:var(--text-3);padding:4px 0;text-transform:lowercase}
-.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.ccell{min-height:82px;border-radius:var(--r-sm);background:var(--surface);border:1px solid var(--border);padding:4px 3px;display:flex;flex-direction:column;align-items:stretch;gap:2px;text-align:left;overflow:hidden}
-.ccell.mut{background:transparent;border-color:transparent}
-.ccell.mut .cnum{color:var(--text-3);opacity:.4}
-.ccell.today{border-color:var(--brand);background:var(--brand-soft)}
-.ccell .cnum{font-family:'Nunito';font-weight:800;font-size:13px;color:var(--text);padding-left:2px}
-.ccell.today .cnum{color:var(--brand-strong)}
+.calgrid-wd{display:grid;grid-template-columns:repeat(7,1fr);gap:0;margin-top:6px;border-bottom:1px solid var(--border);padding-bottom:4px}
+.cwd{text-align:center;font-size:10.5px;font-weight:700;color:var(--text-3);padding:2px 0;text-transform:lowercase;letter-spacing:.02em}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:0}
+.ccell{min-height:88px;background:none;border:none;border-bottom:1px solid var(--border);padding:5px 3px 4px;display:flex;flex-direction:column;align-items:stretch;gap:3px;text-align:left;overflow:hidden}
+.ccell:active{background:var(--surface-2)}
+.ccell.wknd{background:var(--surface-2)}
+.ccell.wknd:active{background:var(--border)}
+.ccell.mut{opacity:.28}
+.ccell .cnum{font-size:12.5px;font-weight:600;color:var(--text-2);width:22px;height:22px;display:grid;place-items:center;border-radius:50%;flex:none}
+.ccell .cnum.today{background:var(--brand);color:#fff;font-weight:800}
 .ccell .cevs{display:flex;flex-direction:column;gap:2px;min-width:0}
-.cev{font-size:9.5px;font-weight:600;padding:2px 3px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
-.cmore{font-size:9px;color:var(--text-3);font-weight:700;padding-left:3px}
+.cev{font-size:9.5px;font-weight:600;padding:2px 4px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.35}
+.cmore{font-size:9px;color:var(--text-3);font-weight:600;padding-left:4px}
+/* свои поля времени */
+.timepick{display:flex;align-items:center;justify-content:center;font-weight:600;flex:1}
+.evic{display:grid;place-items:center;flex:none}
+.evic svg{width:18px;height:18px}
+.cswrow{display:flex;flex-wrap:wrap;gap:8px;padding:0 0 2px}
+.csw{width:30px;height:30px;border-radius:50%;border:2.5px solid transparent;flex:none;transition:transform .1s}
+.csw:active{transform:scale(.9)}
+.csw[aria-pressed="true"]{border-color:var(--text)}
+.csw.auto{width:auto;height:30px;padding:0 12px;border-radius:var(--r-pill);background:var(--surface-2);border:1.5px solid var(--border);font-size:12px;font-weight:600;color:var(--text-2)}
+.csw.auto[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand-strong)}
+.chips-sm .chip{min-height:32px;padding:0 12px;font-size:12.5px}
+.tp{display:flex;gap:10px;padding:4px 16px 0}
+.tpcol{flex:1;min-width:0}
+.tpk{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;text-align:center;margin-bottom:4px}
+.tplist{max-height:190px;overflow-y:auto;scrollbar-width:none;display:flex;flex-direction:column;gap:4px}
+.tplist::-webkit-scrollbar{display:none}
+.tpi{min-height:38px;border-radius:var(--r-sm);background:var(--surface-2);font-family:'Nunito';font-weight:700;font-size:15px;color:var(--text-2)}
+.tpi.on{background:var(--brand);color:#fff}
 .allday{display:flex;flex-direction:column;gap:5px;padding:8px 2px}
 .adev{text-align:left;font-size:13px;font-weight:600;padding:8px 10px;border-radius:var(--r-sm)}
 .hours{position:relative;margin-top:6px;padding-left:46px}
@@ -550,6 +569,7 @@ const IC={
   xS:'<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>',
   chev:'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
   cal2:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>',
+  money:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 11a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L6 8Z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></svg>',
 };
 
 /* ============================================================ РЕНДЕР */
@@ -976,14 +996,15 @@ function renderCalMonth(){
     ${calFilterBar()}
     <div class="calgrid-wd">${wd.map(w=>`<div class="cwd">${w}</div>`).join('')}</div>
     <div class="calgrid">`;
-  cells.forEach(c=>{
+  cells.forEach((c,idx)=>{
+    const weekend=(idx%7)>=5;
     if(c.mut){html+=`<div class="ccell mut"><span class="cnum">${c.d}</span></div>`;return}
     const evs=eventsOfDay(c.iso);
     const show=evs.slice(0,3);
-    html+=`<button class="ccell ${c.iso===today?'today':''}" data-day="${c.iso}">
-      <span class="cnum">${c.d}</span>
-      <span class="cevs">${show.map(e=>`<span class="cev" style="background:${evColor(e)}1F;color:${evColor(e)};border-left:3px solid ${ownerColor(e)}">${esc(e.title)}</span>`).join('')}
-      ${evs.length>3?`<span class="cmore">+${evs.length-3}</span>`:''}</span>
+    html+=`<button class="ccell ${weekend?'wknd':''}" data-day="${c.iso}">
+      <span class="cnum ${c.iso===today?'today':''}">${c.d}</span>
+      <span class="cevs">${show.map(e=>`<span class="cev" style="background:${evColor(e)}24;color:${evColor(e)}">${esc(e.title)}</span>`).join('')}
+      ${evs.length>3?`<span class="cmore">ещё ${evs.length-3}</span>`:''}</span>
     </button>`;
   });
   html+=`</div><div style="height:90px"></div></div>`;
@@ -1011,7 +1032,7 @@ function renderCalDay(){
     </div>
     ${calFilterBar()}`;
   if(allDay.length){
-    html+=`<div class="allday">${allDay.map(e=>`<button class="adev" data-ev="${e.id}" style="background:${evColor(e)}1F;color:${evColor(e)};border-left:3px solid ${ownerColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;
+    html+=`<div class="allday">${allDay.map(e=>`<button class="adev" data-ev="${e.id}" style="background:${evColor(e)}24;color:${evColor(e)}">${esc(e.title)}</button>`).join('')}</div>`;
   }
   // часовая шкала
   html+=`<div class="hours">`;
@@ -1079,19 +1100,20 @@ function openEventEdit(ev, dayIso){
 }
 function drawEventSheet(){
   const d=EDRAFT;
-  const swatches=EVENT_COLORS.map(c=>`<button class="sw" data-ec="${c}" aria-pressed="${d.color===c}" style="background:${c}"></button>`).join('');
+  const swatches=EVENT_COLORS.map(c=>`<button class="csw" data-ec="${c}" aria-pressed="${d.color===c}" style="background:${c}"></button>`).join('');
   const reminders=[[0,'нет'],[10,'10 мин'],[30,'30 мин'],[60,'1 час'],[1440,'1 день']];
   openSheet(`<div class="s-title">${d.id?'Изменить событие':'Новое событие'}</div>
     <div class="evform">
       <input class="input" id="evTitle" placeholder="Название" value="${esc(d.title)}">
-      <button class="input evpick" id="evDay">${IC.cal}<span>${esc(fmtDate(d.day))}</span></button>
-      <div class="evrow">
-        <button class="chip ${d.all_day?'on':''}" id="evAllDay">${d.all_day?'Весь день':'Указать время'}</button>
+      <button class="input evpick" id="evDay"><span class="evic">${IC.cal}</span><span>${esc(fmtDate(d.day))}</span></button>
+      <div class="seg" style="margin-top:2px">
+        <button data-ad="0" class="${!d.all_day?'on':''}">Со временем</button>
+        <button data-ad="1" class="${d.all_day?'on':''}">Весь день</button>
       </div>
       ${d.all_day?'':`<div class="evrow">
-        <input class="input" id="evStart" type="time" value="${d.start}">
+        <button class="input timepick" id="evStart"><span>${esc(d.start)}</span></button>
         <span class="evdash">–</span>
-        <input class="input" id="evEnd" type="time" value="${d.end}">
+        <button class="input timepick" id="evEnd"><span>${esc(d.end||'—')}</span></button>
       </div>`}
       <div class="lbl-min" style="margin:10px 2px 6px">Кому</div>
       <div class="chips" id="evScope">
@@ -1099,12 +1121,12 @@ function drawEventSheet(){
         <button class="chip ${d.scope==='shared'?'on':''}" data-sc="shared"><span class="cd" style="background:var(--shared)"></span>Общее</button>
       </div>
       <div class="lbl-min" style="margin:10px 2px 6px">Цвет</div>
-      <div class="sw-row" style="padding:0 0 8px">
-        <button class="sw" data-ec="" aria-pressed="${!d.color}" style="background:var(--surface-2);border-color:var(--border)"></button>
+      <div class="cswrow">
+        <button class="csw auto" data-ec="" aria-pressed="${!d.color}">авто</button>
         ${swatches}
       </div>
-      <div class="lbl-min" style="margin:6px 2px 6px">Напомнить</div>
-      <div class="chips" id="evRemind">
+      <div class="lbl-min" style="margin:10px 2px 6px">Напомнить</div>
+      <div class="chips chips-sm" id="evRemind">
         ${reminders.map(([v,n])=>`<button class="chip ${d.remind_min===v?'on':''}" data-rm="${v}">${n}</button>`).join('')}
       </div>
       <textarea class="input" id="evNote" placeholder="Заметка" style="margin-top:10px">${esc(d.note)}</textarea>
@@ -1112,9 +1134,9 @@ function drawEventSheet(){
     </div>`);
   const t=$('#evTitle'); if(t) t.oninput=e=>d.title=e.target.value;
   $('#evNote').oninput=e=>d.note=e.target.value;
-  const st=$('#evStart'); if(st) st.onchange=e=>d.start=e.target.value;
-  const en=$('#evEnd'); if(en) en.onchange=e=>d.end=e.target.value;
-  $('#evAllDay').onclick=()=>{d.all_day=!d.all_day;drawEventSheet()};
+  $('#sheet').querySelectorAll('[data-ad]').forEach(b=>b.onclick=()=>{const v=b.dataset.ad==='1';if(d.all_day===v)return;d.all_day=v;drawEventSheet()});
+  const st=$('#evStart'); if(st) st.onclick=()=>openTimePicker('start');
+  const en=$('#evEnd'); if(en) en.onclick=()=>openTimePicker('end');
   $('#evDay').onclick=()=>openEventDayPicker();
   $('#sheet').querySelectorAll('[data-sc]').forEach(b=>b.onclick=()=>{
     const v=b.dataset.sc;
@@ -1122,12 +1144,39 @@ function drawEventSheet(){
     $('#sheet').querySelectorAll('[data-sc]').forEach(x=>x.classList.toggle('on',x.dataset.sc===v));
   });
   $('#sheet').querySelectorAll('[data-ec]').forEach(b=>b.onclick=()=>{
-    d.color=b.dataset.ec;$('#sheet').querySelectorAll('[data-ec]').forEach(x=>x.setAttribute('aria-pressed',x.dataset.ec===d.color));
+    d.color=b.dataset.ec;$('#sheet').querySelectorAll('[data-ec]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.ec===d.color)));
   });
   $('#sheet').querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{
     d.remind_min=+b.dataset.rm;$('#sheet').querySelectorAll('[data-rm]').forEach(x=>x.classList.toggle('on',+x.dataset.rm===d.remind_min));
   });
   $('#evSave').onclick=saveEvent;
+}
+/* свой выбор времени (вместо системного input type=time) */
+function openTimePicker(which){
+  const d=EDRAFT;
+  const cur=(which==='start'?d.start:d.end)||'09:00';
+  let [ch,cm]=cur.split(':').map(Number); if(isNaN(ch))ch=9; if(isNaN(cm))cm=0;
+  const hours=Array.from({length:24},(_,i)=>String(i).padStart(2,'0'));
+  const mins=['00','05','10','15','20','25','30','35','40','45','50','55'];
+  const draw=()=>{
+    openSheet(`<div class="s-title">${which==='start'?'Начало':'Окончание'}</div>
+      <div class="tp">
+        <div class="tpcol"><div class="tpk">час</div><div class="tplist" id="tpH">${hours.map(h=>`<button class="tpi ${+h===ch?'on':''}" data-h="${h}">${h}</button>`).join('')}</div></div>
+        <div class="tpcol"><div class="tpk">мин</div><div class="tplist" id="tpM">${mins.map(m=>`<button class="tpi ${+m===cm?'on':''}" data-m="${m}">${m}</button>`).join('')}</div></div>
+      </div>
+      <div style="padding:8px 16px 4px"><button class="btn btn-primary btn-block" id="tpOk">Готово</button></div>`);
+    $('#sheet').querySelectorAll('[data-h]').forEach(b=>b.onclick=()=>{ch=+b.dataset.h;$('#tpH').querySelectorAll('.tpi').forEach(x=>x.classList.toggle('on',+x.dataset.h===ch))});
+    $('#sheet').querySelectorAll('[data-m]').forEach(b=>b.onclick=()=>{cm=+b.dataset.m;$('#tpM').querySelectorAll('.tpi').forEach(x=>x.classList.toggle('on',+x.dataset.m===cm))});
+    $('#tpOk').onclick=()=>{
+      const v=String(ch).padStart(2,'0')+':'+String(cm).padStart(2,'0');
+      if(which==='start'){d.start=v; if(d.end&&d.end<=v){const eh=Math.min(23,ch+1);d.end=String(eh).padStart(2,'0')+':'+String(cm).padStart(2,'0')}}
+      else d.end=v;
+      drawEventSheet();
+    };
+    // прокрутка к выбранному
+    setTimeout(()=>{const sel=$('#tpH')?.querySelector('.on');if(sel)sel.scrollIntoView({block:'center'});},30);
+  };
+  draw();
 }
 function openEventDayPicker(){
   const cur=new Date(EDRAFT.day+'T00:00:00');
@@ -1141,10 +1190,19 @@ function openEventDayPicker(){
       cells+=`<button class="dp-day ${iso===EDRAFT.day?'sel':''} ${iso===todayISO()&&iso!==EDRAFT.day?'today':''}" data-pd="${iso}">${dn}</button>`}
     openSheet(`<div class="s-title">Дата события</div><div class="dp">
       <div class="dp-head"><button class="dp-nav" id="pPrev">${IC.back}</button><span class="mn">${mName}</span><button class="dp-nav" id="pNext">${IC.fwd}</button></div>
-      <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div></div>`);
+      <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div>
+      <div class="dp-quick"><button id="pToday">Сегодня</button><button id="pTomorrow">Завтра</button></div>
+      <div style="padding:12px 4px 2px"><button class="btn btn-primary btn-block" id="pDone">Готово</button></div>
+    </div>`);
     $('#pPrev').onclick=()=>{let nm=mm-1,ny=yy;if(nm<0){nm=11;ny--}draw(ny,nm)};
     $('#pNext').onclick=()=>{let nm=mm+1,ny=yy;if(nm>11){nm=0;ny++}draw(ny,nm)};
-    $('#sheet').querySelectorAll('[data-pd]').forEach(b=>b.onclick=()=>{EDRAFT.day=b.dataset.pd;drawEventSheet()});
+    $('#sheet').querySelectorAll('[data-pd]').forEach(b=>b.onclick=()=>{
+      EDRAFT.day=b.dataset.pd;
+      $('#sheet').querySelectorAll('[data-pd]').forEach(x=>x.classList.toggle('sel',x.dataset.pd===EDRAFT.day));
+    });
+    $('#pToday').onclick=()=>{EDRAFT.day=todayISO();const t=new Date();draw(t.getFullYear(),t.getMonth())};
+    $('#pTomorrow').onclick=()=>{const t=new Date();t.setDate(t.getDate()+1);EDRAFT.day=new Date(t.getTime()-t.getTimezoneOffset()*60000).toISOString().slice(0,10);draw(t.getFullYear(),t.getMonth())};
+    $('#pDone').onclick=()=>drawEventSheet();
   };
   draw(y,m);
 }
