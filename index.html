@@ -252,19 +252,12 @@
           mask-image:linear-gradient(180deg,#000 40%,rgba(0,0,0,.5) 72%,transparent 100%);
 }
 /* кнопки в шапке — с цветной подложкой, как в превью */
-:root[data-theme="dark"] .iconbtn::before,
-:root[data-theme="dark"] .secbtn::before{
+:root[data-theme="dark"] .iconbtn::before{
   content:"";position:absolute;inset:0;z-index:-2;border-radius:inherit;pointer-events:none;
   background:var(--tint);filter:saturate(.8) blur(6px);opacity:.3;
   -webkit-mask-image:var(--tint-melt); mask-image:var(--tint-melt);
 }
 :root[data-theme="dark"] .iconbtn{position:relative;isolation:isolate}
-:root[data-theme="dark"] .secbtn{position:relative;isolation:isolate;padding:4px 10px;border-radius:14px}
-:root[data-theme="dark"] .secbtn::after{
-  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
-  background-image:var(--noise);background-size:120px 120px;opacity:.16;
-  -webkit-mask-image:var(--melt); mask-image:var(--melt);
-}
 
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :focus{outline:none}
