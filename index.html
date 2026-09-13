@@ -259,6 +259,15 @@
 }
 :root[data-theme="dark"] .iconbtn{position:relative;isolation:isolate}
 
+/* всплывающие слои обязаны перекрывать то, что под ними */
+:root[data-theme="dark"] .sheet{background:#1B1725;box-shadow:var(--sh-3), 0 -1px 0 rgba(255,255,255,.05)}
+:root[data-theme="dark"] #entry{background:#15111E}
+:root[data-theme="dark"] #scrim{background:rgba(0,0,0,.58)}
+:root[data-theme="dark"] .keypad{background:#1B1725}
+/* материал внутри них — поверх непрозрачной основы */
+:root[data-theme="dark"] .sheet::before{opacity:.18}
+:root[data-theme="dark"] .sheet::after{opacity:.14}
+
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :focus{outline:none}
 :focus-visible{outline:2px solid var(--brand);outline-offset:2px}
