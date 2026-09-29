@@ -510,6 +510,10 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .period::-webkit-scrollbar{display:none}
 .period button{flex:1;min-width:64px;min-height:36px;border-radius:var(--r-pill);border:1.5px solid var(--border);background:var(--surface);font-weight:600;font-size:13.5px;color:var(--text-2);transition:all .13s}
 .period button.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand-strong)}
+.period-custom{flex:none;width:46px;min-height:36px;border-radius:var(--r-pill);border:1.5px solid var(--border);background:var(--surface);color:var(--text-2);display:grid;place-items:center}
+.period-custom.on{background:var(--brand-soft);border-color:var(--brand);color:var(--brand-strong)}
+.period-custom svg{width:17px;height:17px}
+.dp-day.inr{background:var(--brand-soft);border-radius:0;color:var(--brand-strong)}
 .period-lbl{text-align:center;font-family:'Nunito';font-weight:700;font-size:14px;color:var(--text-3);text-transform:capitalize;padding:8px 0 2px}
 .legend{padding:6px 16px 4px}
 .legend .li{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
@@ -554,6 +558,7 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 /* дни внутри недели — шапка сверху, операции строками */
 .dayblock{margin-bottom:12px}
 .dayhead2{display:flex;align-items:baseline;gap:6px;padding:4px 8px 6px}
+.dayhead2 .dsum{margin-left:auto;font-family:'Nunito';font-weight:700;font-size:13px;color:var(--text-3)}
 .dayhead2 .dnum{font-family:'Nunito';font-weight:800;font-size:15px;color:var(--text-2);line-height:1}
 .dayhead2 .dmon{font-size:12px;color:var(--text-3);font-weight:600}
 .dayhead2 .dwd{font-size:11.5px;color:var(--text-3);font-weight:500;text-transform:lowercase}
@@ -585,9 +590,10 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .dd-acc{display:inline-flex;align-items:center;gap:7px}
 .dd-acc .d{width:9px;height:9px;border-radius:50%}
 .limits{display:flex;flex-direction:column;gap:10px;margin-top:6px}
-.limitcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:14px 16px}
+.limitcard{display:block;width:100%;text-align:left;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--sh-1);padding:11px 14px}
 .limitcard:active{background:var(--surface-2)}
-.lc-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.lc-prev{font-size:11.5px;color:var(--danger);margin-top:6px}
+.lc-top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:7px}
 .lc-name{font-weight:700;font-size:15px;font-family:'Nunito'}
 .lc-val{font-family:'Nunito';font-weight:700;font-size:14px}
 .lc-bar{position:relative;height:12px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden}
@@ -599,7 +605,6 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 }
 @keyframes limitPulse{0%,100%{opacity:1}50%{opacity:.62}}
 @keyframes limitPulseOver{0%,100%{opacity:1;filter:none}50%{opacity:.75;filter:brightness(1.15)}}
-.lc-sub{font-size:12.5px;color:var(--text-3);margin-top:6px}
 </style>
 </head>
 <body>
@@ -699,7 +704,7 @@ const db={
 /* ============================================================ HELPERS */
 const $=(s,r=document)=>r.querySelector(s);
 const app=$('#app');
-let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, ACC_ID=null, OPS_FILTER='all', STAT_OPEN={}, TABS=null;
+let STATE=null, ROUTE='boot', DRAFT=null, CAROU_IDX=0, DP_VIEW=null, HOME_VIEW='ops', PERIOD='month', RT=null, ACC_ID=null, STAT_OPEN={}, TABS=null, CUSTOM_RANGE=null;
 /* раздел приложения: money | cal */
 let SECTION='money', CAL_VIEW='month', CAL_Y=null, CAL_M=null, CAL_DAY=null, CAL_FILTER='all', EDRAFT=null;
 const EVENT_COLORS=['#2E6B4F','#57B4E8','#E0A33D','#EC5F86','#8B6DF0','#E5484D','#2AA6A0','#E5844D'];
@@ -928,27 +933,18 @@ function shade(hex){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)
 
 function renderFeed(){
   const f=$('#homebody');
-  const myAcc=STATE.accounts.find(a=>a.owner===STATE.session);
-  const sharedAcc=STATE.accounts.find(a=>!a.owner);
-  // видим только свои и общие операции (UX-фильтр)
-  let txs=STATE.transactions.filter(t=>t.account_id===myAcc?.id||t.account_id===sharedAcc?.id);
-  if(OPS_FILTER==='mine') txs=txs.filter(t=>t.account_id===myAcc?.id);
-  if(OPS_FILTER==='shared') txs=txs.filter(t=>t.account_id===sharedAcc?.id);
+  const acc=activeAcc();
+  // лента показывает операции выбранного в карусели счёта
+  let txs=STATE.transactions.filter(t=>t.account_id===acc);
   txs=txs.sort((a,b)=>b.occurred_on.localeCompare(a.occurred_on)||(txTime(b)-txTime(a)));
 
-  const filterBar=`<div class="opsfilter" id="opsfilter">
-      <button data-of="all" class="${OPS_FILTER==='all'?'on':''}">Все</button>
-      <button data-of="mine" class="${OPS_FILTER==='mine'?'on':''}">Личные</button>
-      <button data-of="shared" class="${OPS_FILTER==='shared'?'on':''}">Общие</button>
-    </div>`;
-
   if(txs.length===0){
-    f.innerHTML=`<div class="pad fade">${filterBar}<div class="empty"><div class="circ">${IC.receipt}</div><h3>Пока пусто</h3><p>Нажмите «+», чтобы добавить операцию.</p></div></div>`;
-    bindOpsFilter();return;
+    f.innerHTML=`<div class="pad fade"><div class="empty"><div class="circ">${IC.receipt}</div><h3>Пока пусто</h3><p>Нажмите «+», чтобы добавить операцию.</p></div></div>`;
+    return;
   }
   const weeks={};txs.forEach(t=>{const mon=mondayOf(t.occurred_on);(weeks[mon]=weeks[mon]||[]).push(t)});
   const mons=Object.keys(weeks).sort((a,b)=>b.localeCompare(a));
-  let html='<div class="pad fade">'+filterBar,lastMonth='';
+  let html='<div class="pad fade">',lastMonth='';
   mons.forEach(mon=>{
     const ml=monthLabel(mon);if(ml!==lastMonth){html+=`<div class="month-div">${ml}</div>`;lastMonth=ml}
     const list=weeks[mon];const exp=list.filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
@@ -960,11 +956,13 @@ function renderFeed(){
       const wdFull=['воскресенье','понедельник','вторник','среда','четверг','пятница','суббота'][dd.getDay()];
       const isToday=d===todayISO();
       const mName=new Intl.DateTimeFormat('ru-RU',{month:'short'}).format(dd).replace('.','');
+      const dayExp=days[d].filter(t=>t.type==='expense').reduce((s,t)=>s+t.amount,0);
       html+=`<div class="dayblock">
         <div class="dayhead2 ${isToday?'today':''}">
           <span class="dnum">${dd.getDate()}</span>
           <span class="dmon">${esc(mName)}</span>
           <span class="dwd">${isToday?'сегодня':wdFull}</span>
+          ${dayExp>0?`<span class="dsum">− ${fmt0(dayExp)} ₽</span>`:''}
         </div>
         <div class="card daycard">`;
       days[d].forEach(t=>{
@@ -987,10 +985,8 @@ function renderFeed(){
     html+='</div>';
   });
   html+='</div>';f.innerHTML=html;
-  bindOpsFilter();
   f.querySelectorAll('[data-tx]').forEach(b=>b.onclick=()=>openTxDetail(b.dataset.tx));
 }
-function bindOpsFilter(){$('#opsfilter')?.querySelectorAll('[data-of]').forEach(b=>b.onclick=()=>{if(OPS_FILTER===b.dataset.of)return;OPS_FILTER=b.dataset.of;renderFeed()})}
 
 /* ---------- LIMITS (месячные) ---------- */
 function monthRangeNow(){const now=new Date();const y=now.getFullYear(),m=now.getMonth();
@@ -999,6 +995,14 @@ function monthRangeNow(){const now=new Date();const y=now.getFullYear(),m=now.ge
   return{start:s,end:e};}
 function limitOf(catId){const acc=activeAcc();return (STATE.limits||[]).find(l=>l.category_id===catId&&l.account_id===acc)}
 function spentThisMonth(catId){const {start,end}=monthRangeNow();const acc=activeAcc();return STATE.transactions.filter(t=>t.type==='expense'&&t.category_id===catId&&t.account_id===acc&&t.occurred_on>=start&&t.occurred_on<=end).reduce((s,t)=>s+t.amount,0)}
+function prevMonthOver(catId){
+  const now=new Date();const y=now.getFullYear(),m=now.getMonth();
+  const s=new Date(Date.UTC(y,m-1,1)).toISOString().slice(0,10);
+  const e=new Date(Date.UTC(y,m,0)).toISOString().slice(0,10);
+  const acc=activeAcc();const lim=limitOf(catId);if(!lim)return 0;
+  const sp=STATE.transactions.filter(t=>t.type==='expense'&&t.category_id===catId&&t.account_id===acc&&t.occurred_on>=s&&t.occurred_on<=e).reduce((a,t)=>a+t.amount,0);
+  return Math.max(0, sp-lim.amount);
+}
 function renderLimits(){
   const body=$('#homebody');
   const acc=accById(activeAcc());
@@ -1015,13 +1019,13 @@ function renderLimits(){
       const over=sp>lim;
       const near=!over&&pct>=80;
       const barCol=over?'var(--danger)':(near?'var(--warning)':(c.color||'var(--brand)'));
-      // засечки по неделям месяца (доли ~ по 7 дней)
       const daysInMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
       const ticks=[7,14,21,28].filter(d=>d<daysInMonth).map(d=>`<span class="lc-tick" style="left:${(d/daysInMonth*100).toFixed(1)}%"></span>`).join('');
+      const prevOver=prevMonthOver(c.id);
       html+=`<button class="limitcard" data-lim="${c.id}">
-        <div class="lc-top"><span class="lc-name">${esc(c.name)}</span><span class="lc-val" style="color:${over?'var(--danger)':'var(--text)'}">${fmt0(sp)} / ${fmt0(lim)} ₽</span></div>
+        <div class="lc-top"><span class="lc-name">${esc(c.name)}</span><span class="lc-val" style="color:${over?'var(--danger)':'var(--text-2)'}">${fmt0(sp)} / ${fmt0(lim)} ₽</span></div>
         <div class="lc-bar ${over?'over':(near?'near':'')}"><i style="width:${pct}%;background:${barCol}"></i>${ticks}</div>
-        <div class="lc-sub">${over?`превышен на ${fmt0(sp-lim)} ₽`:`осталось ${fmt0(lim-sp)} ₽`}</div>
+        ${prevOver>0?`<div class="lc-prev">в прошлом месяце перебор на ${fmt0(prevOver)} ₽</div>`:''}
       </button>`;
     });
     html+=`</div>`;
@@ -1059,10 +1063,11 @@ function openLimitEdit(catId){
 /* ---------- ANALYTICS ---------- */
 function periodRange(kind){
   const now=new Date(); const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  if(kind==='custom'&&CUSTOM_RANGE){const {a,b}=CUSTOM_RANGE;const s=a<=b?a:b,e=a<=b?b:a;
+    return{start:s,end:e,label:fmtDate(s)+' – '+fmtDate(e)};}
   if(kind==='day'){const s=iso(now);return{start:s,end:s,label:fmtDate(s)}}
   if(kind==='week'){const mon=mondayOf(iso(now));const m=new Date(mon+'T00:00:00');const e=new Date(m);e.setDate(m.getDate()+6);return{start:mon,end:iso(e),label:weekLabel(mon)}}
   if(kind==='year'){const y=now.getFullYear();return{start:y+'-01-01',end:y+'-12-31',label:String(y)}}
-  // month
   const y=now.getFullYear(),m=now.getMonth();
   const s=new Date(Date.UTC(y,m,1)).toISOString().slice(0,10);
   const e=new Date(Date.UTC(y,m+1,0)).toISOString().slice(0,10);
@@ -1072,6 +1077,7 @@ function periodRange(kind){
 function renderStats(){
   const body=$('#homebody');
   if(PERIOD==='day')PERIOD='week';
+  if(PERIOD==='custom'&&!CUSTOM_RANGE)PERIOD='month';
   const {start,end,label}=periodRange(PERIOD);
   const acc=accById(activeAcc());
   let inRange=STATE.transactions.filter(t=>t.occurred_on>=start&&t.occurred_on<=end&&t.account_id===activeAcc());
@@ -1085,7 +1091,7 @@ function renderStats(){
   const bigCls=big.length>9?'xs':(big.length>7?'sm':'');
 
   let html=`<div class="fade statwrap">
-    <div class="period" id="period">${periods.map(([k,n])=>`<button data-p="${k}" class="${PERIOD===k?'on':''}">${n}</button>`).join('')}</div>
+    <div class="period" id="period">${periods.map(([k,n])=>`<button data-p="${k}" class="${PERIOD===k?'on':''}">${n}</button>`).join('')}<button class="period-custom ${PERIOD==='custom'?'on':''}" id="pCustom" title="Произвольный период">${IC.cal}</button></div>
     <div class="ctxline" style="text-align:center">${esc(acc?.name||'')} · ${esc(label)}</div>
     <div class="spent">
       <div class="sp-k">Потрачено</div>
@@ -1139,6 +1145,41 @@ function bindPeriod(){
   $('#period')?.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{
     if(PERIOD===b.dataset.p)return; PERIOD=b.dataset.p; renderStats();
   });
+  const cb=$('#pCustom'); if(cb) cb.onclick=openRangePicker;
+}
+/* выбор произвольного диапазона: два тапа — от и до */
+function openRangePicker(){
+  const base=CUSTOM_RANGE?new Date(CUSTOM_RANGE.a+'T00:00:00'):new Date();
+  let vy=base.getFullYear(), vm=base.getMonth();
+  let a=CUSTOM_RANGE?CUSTOM_RANGE.a:null, b=CUSTOM_RANGE?CUSTOM_RANGE.b:null;
+  const draw=()=>{
+    const first=new Date(vy,vm,1),startWd=(first.getDay()+6)%7,days=new Date(vy,vm+1,0).getDate();
+    const mName=new Intl.DateTimeFormat('ru-RU',{month:'long',year:'numeric'}).format(first);
+    const wd=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+    const lo=a&&b?(a<=b?a:b):a, hi=a&&b?(a<=b?b:a):a;
+    let cells='';for(let i=0;i<startWd;i++)cells+='<div></div>';
+    for(let dn=1;dn<=days;dn++){const iso=new Date(Date.UTC(vy,vm,dn)).toISOString().slice(0,10);
+      const inR=lo&&hi&&iso>=lo&&iso<=hi;
+      const isEnd=iso===a||iso===b;
+      cells+=`<button class="dp-day ${isEnd?'sel':''} ${inR&&!isEnd?'inr':''}" data-rd="${iso}">${dn}</button>`;}
+    const hint=!a?'Выберите начало':(!b?'Выберите конец':fmtDate(lo)+' – '+fmtDate(hi));
+    openSheet(`<div class="s-title">Период</div>
+      <div class="ctxline" style="padding:0 16px 4px">${esc(hint)}</div>
+      <div class="dp">
+        <div class="dp-head"><button class="dp-nav" id="rPrev">${IC.back}</button><span class="mn">${mName}</span><button class="dp-nav" id="rNext">${IC.fwd}</button></div>
+        <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div>
+        <div style="padding:12px 4px 2px"><button class="btn btn-primary btn-block" id="rDone" ${a&&b?'':'disabled'}>Показать</button></div>
+      </div>`);
+    $('#rPrev').onclick=()=>{vm--;if(vm<0){vm=11;vy--}draw()};
+    $('#rNext').onclick=()=>{vm++;if(vm>11){vm=0;vy++}draw()};
+    $('#sheet').querySelectorAll('[data-rd]').forEach(btn=>btn.onclick=()=>{
+      const iso=btn.dataset.rd;
+      if(!a||(a&&b)){a=iso;b=null;} else {b=iso;}
+      draw();
+    });
+    $('#rDone').onclick=()=>{if(!a||!b)return;CUSTOM_RANGE={a,b};PERIOD='custom';closeSheet();renderStats()};
+  };
+  draw();
 }
 
 /* ============================================================ КАЛЕНДАРЬ */
@@ -1777,7 +1818,7 @@ function renderDatePicker(){
         <button class="dp-nav" id="dpNext">${IC.fwd}</button>
       </div>
       <div class="dp-grid">${wd.map(w=>`<div class="dp-wd">${w}</div>`).join('')}${cells}</div>
-      <div class="dp-quick"><button id="dpToday">Сегодня</button><button id="dpYest">Вчера</button></div>
+      <div class="dp-quick"><button id="dpYest">Вчера</button><button id="dpToday">Сегодня</button></div>
       <div style="padding:12px 4px 2px"><button class="btn btn-primary btn-block" id="dpDone">Готово</button></div>
     </div>`);
   $('#dpPrev').onclick=()=>{DP_VIEW.m--;if(DP_VIEW.m<0){DP_VIEW.m=11;DP_VIEW.y--}renderDatePicker()};
