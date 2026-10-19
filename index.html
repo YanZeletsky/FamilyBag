@@ -17,6 +17,7 @@
   --him:#2E6B4F; --him-soft:#2E6B4F1A;
   --her:#57B4E8; --her-soft:#57B4E81A;
   --shared:#E0A33D; --shared-soft:#E0A33D1A;
+  --lime:#8DB63C; --lilac:#8B6BD6;
   --success:#22A06B; --success-soft:#22A06B1A;
   --danger:#E5484D;  --danger-soft:#E5484D1A;
   --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:28px; --r-pill:999px;
@@ -348,7 +349,7 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .tx-sub{font-size:12px;color:var(--text-3);display:flex;align-items:center;gap:6px;margin-top:1px}
 .tx-sub .dot{width:6px;height:6px;border-radius:50%;flex:none}
 .tx-amt{font-family:'Nunito';font-weight:800;font-size:15.5px;white-space:nowrap}
-.tx-amt.exp{color:var(--text)} .tx-amt.inc{color:var(--success)}
+.tx-amt.exp{color:var(--text)} .tx-amt.inc{color:var(--success)} .tx-amt.tr{color:var(--text-2)}
 
 .empty{text-align:center;padding:40px 24px}
 .empty .circ{width:82px;height:82px;border-radius:50%;background:var(--surface-2);display:grid;place-items:center;margin:0 auto 16px;color:var(--text-3)}
@@ -366,9 +367,10 @@ textarea.input{padding:12px 14px;min-height:52px;resize:none;line-height:1.4}
 .seg button.on{background:var(--surface);box-shadow:var(--sh-1)}
 .seg button.on[data-type="expense"]{color:var(--danger)}
 .seg button.on[data-type="income"]{color:var(--success)}
+.seg button.on[data-type="transfer"]{color:var(--text)}
 .entry-amt{text-align:center;padding:14px 16px 6px}
 .entry-amt .a{font-family:'Nunito';font-weight:800;font-size:40px;letter-spacing:-.02em;line-height:1}
-.entry-amt .a.exp{color:var(--text)} .entry-amt .a.inc{color:var(--success)}
+.entry-amt .a.exp{color:var(--text)} .entry-amt .a.inc{color:var(--success)} .entry-amt .a.tr{color:var(--text-2)}
 .entry-amt .a.ph{color:var(--text-3)}
 .entry-amt .cur{font-size:20px;color:var(--text-3);font-weight:700}
 .entry-amt .detsum{font-size:12.5px;color:var(--text-3);margin-top:6px;height:16px}
@@ -774,7 +776,7 @@ function accById(id){return STATE?.accounts.find(a=>a.id===id)}
 function respInfo(resp){if(resp==='shared')return{label:'Общее',color:'shared'};const m=memberById(resp);return m?{label:m.firstName,color:m.color}:{label:'—',color:'text-2'}}
 const fmt=n=>new Intl.NumberFormat('ru-RU',{minimumFractionDigits:2,maximumFractionDigits:2}).format(n||0);
 const fmt0=n=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:0}).format(n||0);
-function accBalance(id){let b=accById(id)?.start||0;STATE.transactions.forEach(t=>{if(t.account_id===id)b+=t.type==='expense'?-t.amount:t.amount});return b}
+function accBalance(id){let b=accById(id)?.start||0;STATE.transactions.forEach(t=>{if(t.type==='transfer'){if(t.account_id===id)b-=t.amount;if(t.to_account_id===id)b+=t.amount}else if(t.account_id===id){b+=t.type==='expense'?-t.amount:t.amount}});return b}
 function familyTotal(){return STATE.accounts.reduce((s,a)=>s+accBalance(a.id),0)}
 function todayISO(){const d=new Date();return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10)}
 function fmtDate(iso){const d=new Date(iso+'T00:00:00'),n=new Date();const o={day:'numeric',month:'long'};if(d.getFullYear()!==n.getFullYear())o.year='numeric';return new Intl.DateTimeFormat('ru-RU',o).format(d)}
@@ -933,9 +935,9 @@ function shade(hex){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)
 
 function renderFeed(){
   const f=$('#homebody');
-  const acc=activeAcc();
-  // лента показывает операции выбранного в карусели счёта
-  let txs=STATE.transactions.filter(t=>t.account_id===acc);
+  const acc=activeAcc();const curAcc=acc;
+  // лента показывает операции выбранного в карусели счёта (переводы — у обоих счетов)
+  let txs=STATE.transactions.filter(t=>t.account_id===acc||t.to_account_id===acc);
   txs=txs.sort((a,b)=>b.occurred_on.localeCompare(a.occurred_on)||(txTime(b)-txTime(a)));
 
   if(txs.length===0){
@@ -969,6 +971,18 @@ function renderFeed(){
         const cat=catById(t.category_id),acc=accById(t.account_id),author=memberById(t.author_id);
         const accColor=acc?cHex(acc.color):getCss('--text-2');
         let ic,cls,sign,sub;
+        if(t.type==='transfer'){
+          const toAcc=accById(t.to_account_id);const out=t.account_id===curAcc;
+          ic=getCss('--text-2');cls='tr';sign=out?'− ':'+ ';
+          const other=out?toAcc:acc;const oc=other?cHex(other.color):ic;
+          sub=`<span class="dot" style="background:${oc}"></span>${out?'→':'←'} ${esc(other?.name||'')}`;
+          html+=`<button class="txrow" data-tx="${t.id}">
+          <div class="tx-ic" style="background:${ic}1A;color:${ic}">⇄</div>
+          <div class="tx-main"><div class="tx-name">Перевод</div>
+            <div class="tx-sub">${sub}${author?`<span>·</span><span>${esc(author.firstName)}</span>`:''}</div></div>
+          <div class="tx-amt ${cls}">${sign}${fmt(t.amount)} ₽</div></button>`;
+          return;
+        }
         if(t.type==='income'){ic=cHex('success');cls='inc';sign='+ ';sub=`<span style="color:var(--success)">доход</span><span>·</span><span>${esc(acc?.name||'')}</span>`}
         else{ic=accColor;cls='exp';sign='− ';sub=`<span class="dot" style="background:${accColor}"></span>${esc(acc?.name||'')}`}
         const title=cat?.name||'Без категории';
@@ -1506,13 +1520,19 @@ function openTxDetail(id){
   const t=STATE.transactions.find(x=>x.id===id);if(!t)return;
   const fab=$('#fab'); if(fab) fab.style.display='none';
   const cat=catById(t.category_id),acc=accById(t.account_id),author=memberById(t.author_id);
-  const isInc=t.type==='income';
+  const isInc=t.type==='income',isTr=t.type==='transfer';
   const subName=t.subcategory_id?((STATE.subcategories||[]).find(s=>s.id===t.subcategory_id)?.name):null;
   const accColor=acc?cHex(acc.color):getCss('--text-2');
   const rows=[];
-  rows.push(['Тип', isInc?'Доход':'Расход']);
-  rows.push(['Категория', esc(cat?.name||'Без категории')+(subName?` <span style="color:var(--text-3)">· ${esc(subName)}</span>`:'')]);
-  rows.push(['Счёт', `<span class="dd-acc"><span class="d" style="background:${accColor}"></span>${esc(acc?.name||'—')}</span>`]);
+  rows.push(['Тип', isTr?'Перевод':isInc?'Доход':'Расход']);
+  if(isTr){
+    const to=accById(t.to_account_id),toColor=to?cHex(to.color):getCss('--text-2');
+    rows.push(['Откуда', `<span class="dd-acc"><span class="d" style="background:${accColor}"></span>${esc(acc?.name||'—')}</span>`]);
+    rows.push(['Куда', `<span class="dd-acc"><span class="d" style="background:${toColor}"></span>${esc(to?.name||'—')}</span>`]);
+  }else{
+    rows.push(['Категория', esc(cat?.name||'Без категории')+(subName?` <span style="color:var(--text-3)">· ${esc(subName)}</span>`:'')]);
+    rows.push(['Счёт', `<span class="dd-acc"><span class="d" style="background:${accColor}"></span>${esc(acc?.name||'—')}</span>`]);
+  }
   rows.push(['Кто внёс', esc(author?.firstName||'—')]);
   rows.push(['Дата', esc(fmtDate(t.occurred_on))]);
 
@@ -1528,7 +1548,7 @@ function openTxDetail(id){
       <div class="grow" style="text-align:center;font-family:'Nunito';font-weight:800;font-size:16px">Операция</div>
       <button class="iconbtn" id="dEdit">${IC.edit}</button>
     </div>
-    <div class="entry-amt"><div class="a ${isInc?'inc':'exp'}">${isInc?'+ ':'− '}${fmt(t.amount)} <span class="cur">₽</span></div></div>
+    <div class="entry-amt"><div class="a ${isTr?'tr':isInc?'inc':'exp'}">${isTr?'':isInc?'+ ':'− '}${fmt(t.amount)} <span class="cur">₽</span></div></div>
     <div class="entry-scroll">
       <div class="card" style="margin:6px 16px 0">
         ${rows.map(([k,v])=>`<div class="dd-row"><span class="dd-k">${k}</span><span class="dd-v">${v}</span></div>`).join('')}
@@ -1553,7 +1573,7 @@ function openEntry(existing){
     const firstCat=STATE.categories.find(c=>c.type==='expense');
     const myAcc=STATE.accounts.find(a=>a.owner===u.id)||STATE.accounts[0];
     DRAFT={id:null,type:'expense',amountStr:'',category_id:firstCat?.id,subcategory_id:null,account_id:myAcc?.id,
-      author_id:u.id,occurred_on:todayISO(),comment:'',items:null,showDet:false};
+      author_id:u.id,occurred_on:todayISO(),comment:'',items:null,showDet:false,to_account_id:null};
   }
   renderEntry();
 }
@@ -1587,10 +1607,30 @@ function subsHTML(){
 }
 function accWrapHTML(){
   const d=DRAFT;
-  return `<div class="lbl-min">Счёт</div>
+  return `<div class="lbl-min" id="accLbl">${d.type==='transfer'?'Откуда':'Счёт'}</div>
     <div class="chips" id="accs">
       ${visibleAccounts().map(a=>`<button class="chip acc-chip ${d.account_id===a.id?'on':''}" data-acc="${a.id}"><span class="cd" style="background:${cHex(a.color)}"></span>${esc(a.name)}</button>`).join('')}
     </div>`;
+}
+function toWrapHTML(){
+  const d=DRAFT;if(d.type!=='transfer')return '';
+  return `<div class="lbl-min">Куда</div>
+    <div class="chips" id="toaccs">
+      ${visibleAccounts().filter(a=>a.id!==d.account_id).map(a=>`<button class="chip acc-chip ${d.to_account_id===a.id?'on':''}" data-toacc="${a.id}"><span class="cd" style="background:${cHex(a.color)}"></span>${esc(a.name)}</button>`).join('')}
+    </div>`;
+}
+function ensureTo(){const d=DRAFT;if(d.type!=='transfer')return;
+  const opts=visibleAccounts().filter(a=>a.id!==d.account_id);
+  if(!opts.some(a=>a.id===d.to_account_id))d.to_account_id=opts[0]?.id||null}
+function refreshTo(){ensureTo();const w=$('#toWrap');if(!w)return;w.innerHTML=toWrapHTML();
+  w.querySelectorAll('[data-toacc]').forEach(b=>b.onclick=()=>{DRAFT.to_account_id=b.dataset.toacc;refreshTo()})}
+function applyTypeUI(){
+  const d=DRAFT,tr=d.type==='transfer';
+  const cb=$('#catBlock'),db_=$('#detBlock');
+  if(cb)cb.style.display=tr?'none':'';
+  if(db_)db_.style.display=tr?'none':'';
+  const l=$('#accLbl');if(l)l.textContent=tr?'Откуда':'Счёт';
+  refreshTo();
 }
 function bindCatChips(){
   $('#cats').querySelectorAll('[data-cat]').forEach(b=>b.onclick=(e)=>{
@@ -1608,17 +1648,17 @@ function bindAccChips(){const w=$('#accs');if(w)w.querySelectorAll('[data-acc]')
 function setCategory(id){DRAFT.category_id=id;DRAFT.subcategory_id=null;
   $('#cats').innerHTML=catsHTML();bindCatChips();refreshSubs()}
 function setSubcategory(id){DRAFT.subcategory_id=id;const w=$('#subs');if(w)w.querySelectorAll('[data-sub]').forEach(b=>b.classList.toggle('on',(b.dataset.sub||null)===(id||null)))}
-function setAccount(id){DRAFT.account_id=id;const w=$('#accs');if(w)w.querySelectorAll('[data-acc]').forEach(b=>b.classList.toggle('on',b.dataset.acc===id))}
+function setAccount(id){DRAFT.account_id=id;const w=$('#accs');if(w)w.querySelectorAll('[data-acc]').forEach(b=>b.classList.toggle('on',b.dataset.acc===id));refreshTo()}
 function refreshSubs(){const w=$('#subWrap');if(w){w.innerHTML=subsHTML();bindSubChips()}}
 function refreshEntryCats(){const c=$('#cats');if(c){c.innerHTML=catsHTML();bindCatChips()}refreshSubs()}
 function setType(t){
   const d=DRAFT; if(d.type===t)return;
   d.type=t;
-  const fc=STATE.categories.find(c=>c.type===t); d.category_id=fc?.id; d.subcategory_id=null;
+  const fc=t==='transfer'?null:STATE.categories.find(c=>c.type===t); d.category_id=fc?.id||null; d.subcategory_id=null;
   $('#entry').querySelectorAll('[data-type]').forEach(b=>b.classList.toggle('on',b.dataset.type===t));
-  const a=$('#amt'); if(a){a.classList.toggle('exp',t==='expense');a.classList.toggle('inc',t==='income')}
-  $('#cats').innerHTML=catsHTML(); bindCatChips();
-  refreshSubs();
+  const a=$('#amt'); if(a){a.classList.toggle('exp',t==='expense');a.classList.toggle('inc',t==='income');a.classList.toggle('tr',t==='transfer')}
+  if(t!=='transfer'){$('#cats').innerHTML=catsHTML(); bindCatChips(); refreshSubs()}
+  applyTypeUI();
 }
 
 /* ---- управление категориями/подкатегориями (в потоке ввода) ---- */
@@ -1696,19 +1736,25 @@ function renderEntry(){
     </div>
     <div style="padding:0 14px"><div class="seg">
       <button data-type="expense" class="${isExp?'on':''}">Расход</button>
-      <button data-type="income" class="${!isExp?'on':''}">Доход</button>
+      <button data-type="income" class="${d.type==='income'?'on':''}">Доход</button>
+      <button data-type="transfer" class="${d.type==='transfer'?'on':''}">Перевод</button>
     </div></div>
     <div class="entry-amt">
-      <div class="a ${isExp?'exp':'inc'} ${amt>0?'':'ph'}" id="amt">${fmtInput(d.amountStr)} <span class="cur">₽</span></div>
+      <div class="a ${d.type==='transfer'?'tr':isExp?'exp':'inc'} ${amt>0?'':'ph'}" id="amt">${fmtInput(d.amountStr)} <span class="cur">₽</span></div>
       <div class="detsum" id="detsum"></div>
     </div>
     <div class="entry-scroll">
-      <div class="lbl-min">Категория</div>
-      <div class="chips" id="cats">${catsHTML()}</div>
-      <div id="subWrap">${subsHTML()}</div>
       <div id="accWrap">${accWrapHTML()}</div>
-      <div class="lbl-min"><span>Детализация</span><button class="dettoggle" id="detToggle">${d.showDet?'скрыть':'разбить по позициям'}</button></div>
-      <div id="detArea"></div>
+      <div id="toWrap"></div>
+      <div id="catBlock">
+        <div class="lbl-min">Категория</div>
+        <div class="chips" id="cats">${catsHTML()}</div>
+        <div id="subWrap">${subsHTML()}</div>
+      </div>
+      <div id="detBlock">
+        <div class="lbl-min"><span>Детализация</span><button class="dettoggle" id="detToggle">${d.showDet?'скрыть':'разбить по позициям'}</button></div>
+        <div id="detArea"></div>
+      </div>
       <div class="lbl-min">Комментарий</div>
       <textarea class="input" id="comment" placeholder="">${esc(d.comment||'')}</textarea>
       <div style="height:16px"></div>
@@ -1732,6 +1778,7 @@ function renderEntry(){
   $('#comment').oninput=e=>d.comment=e.target.value;
   $('#detToggle').onclick=()=>setDet(!d.showDet);
   renderDetArea();
+  applyTypeUI();
   root.querySelectorAll('[data-k]').forEach(b=>b.onclick=()=>pressKey(b.dataset.k));
   $('#kBack').onclick=()=>{d.amountStr=d.amountStr.slice(0,-1);refreshAmt()};
   $('#kDate').onclick=openDatePicker;
@@ -1840,13 +1887,17 @@ function selectDate(iso){
 async function confirmEntry(){
   const d=DRAFT;const amount=currentAmount();
   if(amount<=0){toast('Введите сумму больше нуля');return}
-  if(!d.category_id){toast('Выберите категорию');return}
+  const isTr=d.type==='transfer';
+  if(isTr){if(!d.to_account_id||d.to_account_id===d.account_id){toast('Выберите счёт назначения');return}}
+  else if(!d.category_id){toast('Выберите категорию');return}
   let items=null;
-  if(d.showDet&&d.items){items=d.items.filter(i=>parseFloat(i.amountStr)>0).map(i=>({name:i.name?.trim()||'Позиция',amount:parseFloat(i.amountStr)}));if(items.length===0)items=null}
+  if(!isTr&&d.showDet&&d.items){items=d.items.filter(i=>parseFloat(i.amountStr)>0).map(i=>({name:i.name?.trim()||'Позиция',amount:parseFloat(i.amountStr)}));if(items.length===0)items=null}
   const payload={family_id:STATE.family.id,type:d.type,amount,account_id:d.account_id,category_id:d.category_id,
     subcategory_id:d.type==='expense'?(d.subcategory_id||null):null,
     responsible:null,author_id:d.author_id||STATE.session,
     occurred_on:d.occurred_on,comment:d.comment?.trim()||null,items};
+  if(isTr){payload.category_id=null;payload.subcategory_id=null;payload.items=null;payload.to_account_id=d.to_account_id}
+  else if(d.id&&d.to_account_id)payload.to_account_id=null;
   const editId=d.id;
   // оптимистично: показываем сразу, пишем в фоне
   if(editId){
@@ -1859,7 +1910,7 @@ async function confirmEntry(){
   }else{
     const tmpId='tmp_'+Math.random().toString(36).slice(2,9);
     STATE.transactions.push({...payload,id:tmpId,created_at:Date.now()});
-    toast(d.type==='income'?'Доход добавлен':'Трата добавлена');
+    toast(isTr?'Перевод выполнен':d.type==='income'?'Доход добавлен':'Трата добавлена');
     closeEntry();softRefresh();
     try{const row=await db.insertTx(payload);removeTxLocal(tmpId);upsertTx(row);softRefresh()}
     catch(ex){console.error(ex);removeTxLocal(tmpId);softRefresh();toast('Не удалось сохранить')}
